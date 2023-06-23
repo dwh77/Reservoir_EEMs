@@ -1,0 +1,78 @@
+---
+title: "EEMs exploration"
+author: "Dexter Howard"
+date: "2023-06-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Read in packages 
+
+```{r}
+library(tidyverse)
+library(lubridate) # for changing date format in dataframe: functions ymd() and others 
+library(scales) #for date format on plots
+library(patchwork) #arrange figures w/ slashes and lines
+
+```
+
+## Get data 
+
+```{r}
+# eems_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/841/1/f63272976bcd151f8e879cbd14d9a9ce")
+
+eems <- read.csv("./EEMs_Results.csv")
+head(eems)
+
+eems_cove <- read.csv("./EEMs_Results_CCR_plungepoint_subset.csv")
+
+```
+
+## Example plot 
+Here's an example plot using the EDI eems with some data filering that may be worth exploring 
+
+```{r}
+####Old plot 
+# ccreem_wvwa_streams <- ccreems %>% 
+#   mutate(Depth_m = ifelse(Depth_m == 21, 20, Depth_m)) %>% 
+#   mutate(Group = ifelse(Site == 50, "Dam", "Stream")) %>% 
+#   filter(Depth_m != 6) %>% 
+#   mutate(Site_Depth = ifelse(Site == 50, Depth_m, Site)) %>% 
+#   filter(Group == "Stream") %>% 
+#   ggplot(aes(x = Date, y = HIX))+
+#   geom_point()+
+#   ylim(1.1,10.7)+
+#   # facet_wrap(~Site, ncol = 1)+
+#   facet_wrap(~Site_Depth, ncol = 1)+
+#   ggtitle("CCR Stream HIX")+
+#   # scale_x_date(breaks = "1 month", date_labels = "%b %y")+
+#   theme_bw()+
+#   theme(text = element_text(size = 16)) 
+
+
+# eems %>% 
+#   filter(Reservoir == "CCR") %>% 
+#   mutate(Depth_m = ifelse(Depth_m %in% c("BOT", "PD"), 1, Depth_m),
+#          Depth_m = ifelse(Depth_m == "SURF", 0.1, Depth_m))
+#   ggplot(aes(x = DateTime, y = HIX))+
+#   geom_point()+
+#   facet_wrap(~Site)
+
+eems_cove %>% 
+  mutate(Date = mdy(Date)) %>% 
+  filter(
+    # Site_num %in% c(3000,300,30),
+      Site_num %in% c(1000,10),
+    Date == ymd("2023-06-01")
+         ) %>% 
+  ggplot(aes(x = Site_num, y = BIX, col = Depth_name))+
+    geom_point()
+
+```
+
+
+
+
