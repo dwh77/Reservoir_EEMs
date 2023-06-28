@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Read in packages 
 
-```{r}
+```{r, include = F}
 library(tidyverse)
 library(lubridate) # for changing date format in dataframe: functions ymd() and others 
 library(scales) #for date format on plots
@@ -61,15 +61,30 @@ Here's an example plot using the EDI eems with some data filering that may be wo
 #   geom_point()+
 #   facet_wrap(~Site)
 
+eems %>% 
+  select(-FLAG, -Notes_flag) %>% 
+  pivot_longer(11:28) %>% 
+  mutate(Date = mdy(Date)) %>% 
+  filter( Site == 50,
+          Date == ymd("2023-06-01")
+          ) %>% 
+  ggplot(aes(x = value, y = as.numeric(Depth_m)))+
+  geom_point()+
+  scale_y_reverse()+
+  facet_wrap(~name, scales = "free_x")
+
 eems_cove %>% 
+  select(-FLAG, -Notes_flag) %>% 
+  pivot_longer(13:30) %>% 
   mutate(Date = mdy(Date)) %>% 
   filter(
-    # Site_num %in% c(3000,300,30),
-      Site_num %in% c(1000,10),
+    Site_num %in% c(3000,300,30),
+      # Site_num %in% c(1000,10),
     Date == ymd("2023-06-01")
          ) %>% 
-  ggplot(aes(x = Site_num, y = BIX, col = Depth_name))+
-    geom_point()
+  ggplot(aes(x = Site_num, y = value, col = Depth_name))+
+    geom_point()+
+  facet_wrap(~name, scales = "free_y")
 
 ```
 
