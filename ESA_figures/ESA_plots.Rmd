@@ -26,11 +26,11 @@ library(plotly)
 # eems_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/841/1/f63272976bcd151f8e879cbd14d9a9ce")
 
 ## Full eems data set 
-eems <- read.csv("./EEMs_Results.csv")
+eems <- read.csv("./../EEMs_Results.csv")
 head(eems)
 
 ## EEMs plunge point data subset 
-eems_cove <- read.csv("./EEMs_Results_CCR_plungepoint_subset.csv")
+eems_cove <- read.csv("./../EEMs_Results_CCR_plungepoint_subset.csv")
 
 ```
 
@@ -223,6 +223,7 @@ hpb_1jun <- eems_cove %>%
 
 smb_1jun | smb_4may | hpb_1jun
 
+#ggsave("./ESAposter_plunge.png", width = 23, height = 7, units = "in")
 
 ### SMB spot distances 
 # 23m from flowmate spot to pool A (large trees dam)
@@ -413,6 +414,354 @@ smb4may23  | smb1june23 | hpb1june23
 
 smb4may23 + pelagic4may23 + smb1june23 + hpb1june23 + pelagic1june23 + plot_layout(widths = c(2,1,2,2,1))
 
+ggsave("./ESAposter_plunge_V3.png", width = 23, height = 7, units = "in")
+
+
+
+```
+
+
+## HIX plot on poster
+
+```{r}
+
+ccreems <- read_csv("C:/Users/dwh18/OneDrive/Desktop/EEMs_Correction_Folder/EEMs_Results.csv")
+head(ccreems)
+
+ccreems <- ccreems %>% 
+  filter(Reservoir == "CCR") %>% 
+  mutate(Date = mdy(Date))
+
+# ccreems <- left_join(chem, ccreems, by = c("DateTime" = "Date"))
+
+stream_HIX <- ccreems %>% 
+  mutate(Depth_m = ifelse(Depth_m == 21, 20, Depth_m)) %>%
+  mutate(Group = ifelse(Site == 50, "Dam", "Stream")) %>%
+  filter(Depth_m != 6) %>%
+  mutate(Site_Depth = ifelse(Site == 50, Depth_m, Site)) %>%
+  filter(Group == "Stream") %>%
+  ggplot(aes(x = Date, y = HIX))+
+  geom_point()+
+  ylim(1.1,10.7)+
+  # facet_wrap(~Site, ncol = 1)+
+  facet_wrap(~Site_Depth, ncol = 1)+
+  ggtitle("CCR Stream HIX")+
+  # scale_x_date(breaks = "1 month", date_labels = "%b %y")+
+  theme_bw()+
+  scale_x_date(date_labels = "%b %y")+
+  theme(text = element_text(size = 16))
+
+stream_HIX_b <- ccreems %>% 
+  mutate(Depth_m = ifelse(Depth_m == 21, 20, Depth_m)) %>%
+  mutate(Group = ifelse(Site == 50, "Dam", "Stream")) %>%
+  filter(Site != 201) %>%
+  mutate(Site_Depth = ifelse(Site == 50, Depth_m, Site)) %>%
+  filter(Group == "Stream") %>%
+  mutate(Site = ifelse(Site == 101, 100, Site),
+         Site = ifelse(Site == 301, 300, Site)) %>% 
+  ggplot(aes(x = Date, y = HIX, color = as.factor(Site)))+
+  geom_point(size=4)+
+  geom_line(size=1)+
+  labs(color = "Stream Site",
+       y = "HIX",
+       x = element_blank())+
+  ylim(1.1,10.7)+
+  # facet_wrap(~Site, ncol = 1)+
+  # facet_wrap(~Site_Depth, ncol = 1)+
+  # ggtitle("CCR Stream HIX")+
+  # scale_x_date(breaks = "1 month", date_labels = "%b %y")+
+  theme_bw()+
+   ggtitle("A) Stream HIX")+
+  scale_x_date(date_labels = "%b %y")+
+  theme(text = element_text(size = 21),
+        legend.position = "top",
+        legend.text = element_text(size = 18),
+        axis.text = element_text(size = 21))+
+  scale_color_manual(values = c("100" = "#0072B2", "300" = "#D55E00", "400" = "#CC79A7", "500" = "#999999"  ))
+
+
+res_HIX <- ccreems %>% 
+  mutate(Depth_m = ifelse(Depth_m == 21, 20, Depth_m)) %>%
+  mutate(Group = ifelse(Site == 50, "Dam", "Stream")) %>%
+  # filter(Depth_m != 6) %>%
+  mutate(Site_Depth = ifelse(Site == 50, Depth_m, Site)) %>%
+  filter(Group == "Dam") %>%
+  ggplot(aes(x = Date, y = HIX))+
+  geom_point()+
+  ylim(1.1,10.7)+
+  # facet_wrap(~Site, ncol = 1)+
+  facet_wrap(~Site_Depth, ncol = 1)+
+  # ggtitle("CCR Stream HIX")+
+  # scale_x_date(breaks = "1 month", date_labels = "%b %y")+
+  theme_bw()+
+  scale_x_date(date_labels = "%b %y")+
+  theme(text = element_text(size = 16))
+
+res_HIX_b <- ccreems %>% 
+  mutate(Depth_m = ifelse(Depth_m == 21, 20, Depth_m)) %>%
+  mutate(Group = ifelse(Site == 50, "Dam", "Stream")) %>%
+  # filter(Depth_m != 6) %>%
+  mutate(Site_Depth = ifelse(Site == 50, Depth_m, Site)) %>%
+  filter(Group == "Dam") %>%
+  ggplot(aes(x = Date, y = HIX, color = as.factor(Depth_m)))+
+  geom_point(size=4)+
+  geom_line(size=1)+
+  labs(color = "Depth (m)",
+       y = "HIX",
+       x = element_blank())+
+  ylim(1.1,10.7)+
+  # facet_wrap(~Site, ncol = 1)+
+  # facet_wrap(~Site_Depth, ncol = 1)+
+  # ggtitle("CCR Stream HIX")+
+  # scale_x_date(breaks = "1 month", date_labels = "%b %y")+
+  theme_bw()+
+  ggtitle("B) Reservoir HIX")+
+  scale_x_date(date_labels = "%b %y")+
+  theme(text = element_text(size = 21),
+        legend.position = "top",
+        legend.text = element_text(size = 18),
+        axis.text = element_text(size = 21))+
+  scale_color_manual(values = c("0.1" = "#000000", "1.5" = "#E69F00", "6" = "#56B4E9", "9" = "#009E73", "20" = "#F0E442"))
+
+# stream_HIX_b | res_HIX_b
+# ggsave("./ESA_figures/HIX_combo.png", width = 21, height = 7, units = "in")
+
+## CV calcs
+stream_HIX_CV <- ccreems %>% 
+  mutate(Depth_m = ifelse(Depth_m == 21, 20, Depth_m)) %>%
+  mutate(Group = ifelse(Site == 50, "Dam", "Stream")) %>%
+  filter(Site != 201) %>%
+  mutate(Site_Depth = ifelse(Site == 50, Depth_m, Site)) %>%
+  filter(Group == "Stream") %>%
+  mutate(Site = ifelse(Site == 101, 100, Site),
+         Site = ifelse(Site == 301, 300, Site)) %>% 
+  select(Site, HIX) %>% 
+  group_by(Site) %>% 
+  summarize(mean = mean(HIX, na.rm = T),
+            sd = sd(HIX, na.rm = T)) %>% 
+  mutate(CV = sd/mean) %>% 
+  rename(Depth_m = Site)
+
+
+res_HIX_CV <- ccreems %>% 
+  mutate(Depth_m = ifelse(Depth_m == 21, 20, Depth_m)) %>%
+  mutate(Group = ifelse(Site == 50, "Dam", "Stream")) %>%
+  # filter(Depth_m != 6) %>%
+  mutate(Site_Depth = ifelse(Site == 50, Depth_m, Site)) %>%
+  filter(Group == "Dam") %>% 
+  select(Depth_m, HIX) %>% 
+  group_by(Depth_m) %>% 
+  summarize(mean = mean(HIX, na.rm = T),
+            sd = sd(HIX, na.rm = T)) %>% 
+  mutate(CV = sd/mean)
+
+HIX_CV_plotting <- rbind(stream_HIX_CV, res_HIX_CV) %>% 
+  mutate(Class = ifelse(Depth_m < 50, "Reservoir", "Stream")) %>% 
+  select(Class,  Depth_m, mean, sd, CV)
+  
+
+level_order <- c("Stream", "Reservoir")
+HIX_cv_plot <- HIX_CV_plotting %>% 
+  ggplot(aes(x = Class, y = CV))+
+  geom_boxplot()+
+  geom_point(aes(x = as.factor(Class), y = CV, color = as.factor(Depth_m)), position = position_jitter(), size = 4)+
+  labs(y = "HIX CV", x = element_blank())+
+  ggtitle("C) HIX CV")+
+  scale_x_discrete(limits = level_order) +
+  theme_bw()+
+  theme(text = element_text(size = 21),
+        legend.position = "none",
+        legend.text = element_text(size = 18),
+        axis.text = element_text(size = 21))+
+  scale_color_manual(values = c("0.1" = "#000000", "1.5" = "#E69F00", "6" = "#56B4E9", "9" = "#009E73", "20" = "#F0E442",
+                                 "100" = "#0072B2", "300" = "#D55E00", "400" = "#CC79A7", "500" = "#999999"  ))
+
+  
+stream_HIX_b | res_HIX_b | HIX_cv_plot
+ggsave("./HIX_combo.png", width = 23, height = 7.5, units = "in")
+
+
+```
+
+
+## DOC plots 
+
+```{r}
+chem <- read_csv("C:/Users/dwh18/OneDrive/Desktop/R_Projects/FCR_Metabolism/Data/EDI2023/FCR_chem_2022.csv")
+
+chem %>% 
+  filter(Reservoir == "CCR",
+         Site %in% c(50,51),
+         Depth_m %in% c(0.1,1.5,6,9, 20,21),
+         DateTime >= ymd("2021-01-01")) %>% 
+  # select(Reservoir, Site, DateTime, Depth_m, TN_ugL, TP_ugL, NO3NO2_ugL, NH4_ugL, SRP_ugL) %>% 
+    select(Reservoir, Site, DateTime, Depth_m, DOC_mgL) %>% 
+  pivot_longer(-c(1:4)) %>% 
+  ggplot(aes(x=DateTime, y = value, col = as.factor(Depth_m)))+
+  geom_point()+
+  # geom_vline(xintercept = ymd_hms("2021-08-19 00:00:00"))+   
+  # geom_vline(xintercept = ymd_hms("2021-09-23 00:00:00"))+   
+  # geom_vline(xintercept = ymd_hms("2022-11-17 00:00:00"))+  
+  facet_wrap(~name, ncol = 1, scales = "free_y")
+
+chem %>% 
+  filter(Reservoir == "CCR",
+         Site > 51,
+         DateTime >= ymd("2021-01-01")) %>% 
+  mutate(Site_filt = ifelse(Site >= 100 & Site <200, 100, NA),
+         Site_filt = ifelse(Site >= 200 & Site <300, 200, Site_filt),
+         Site_filt = ifelse(Site >= 300 & Site <400, 300, Site_filt),
+         Site_filt = ifelse(Site >= 400 & Site <500, 400, Site_filt),
+         Site_filt = ifelse(Site >= 500, 500, Site_filt)
+         ) %>% 
+  filter(Site_filt > 200) %>%
+  # select(Reservoir, Site_filt, DateTime, Depth_m, TN_ugL, TP_ugL, NO3NO2_ugL, NH4_ugL, SRP_ugL) %>% 
+   select(Reservoir, Site_filt, DateTime, Depth_m, DOC_mgL) %>% 
+  filter(!is.na(DOC_mgL)) %>% 
+  pivot_longer(-c(1:4)) %>% 
+  ggplot(aes(x=DateTime, y = value))+
+  geom_point()+
+  ylim(0,6)+
+  scale_x_datetime(date_labels = "%b %y")+
+  geom_vline(xintercept = ymd_hms("2021-08-19 00:00:00"))+   
+  geom_vline(xintercept = ymd_hms("2021-09-23 00:00:00"))+   
+  geom_vline(xintercept = ymd_hms("2022-11-17 00:00:00"))+   
+  facet_grid(Site_filt~name, scales = "fixed")
+
+
+stream_doc <-   chem %>% 
+  filter(Reservoir == "CCR",
+         Site > 51,
+         DateTime >= ymd("2021-01-01")) %>% 
+  mutate(Site_filt = ifelse(Site >= 100 & Site <200, 100, NA),
+         Site_filt = ifelse(Site >= 200 & Site <300, 200, Site_filt),
+         Site_filt = ifelse(Site >= 300 & Site <400, 300, Site_filt),
+         Site_filt = ifelse(Site >= 400 & Site <500, 400, Site_filt),
+         Site_filt = ifelse(Site >= 500, 500, Site_filt)
+         ) %>% 
+  filter(Site_filt != 200) %>%
+  # select(Reservoir, Site_filt, DateTime, Depth_m, TN_ugL, TP_ugL, NO3NO2_ugL, NH4_ugL, SRP_ugL) %>% 
+   select(Reservoir, Site_filt, DateTime, Depth_m, DOC_mgL) %>% 
+    filter(!is.na(DOC_mgL)) %>% 
+  ggplot(aes(x=DateTime, y = DOC_mgL, color = as.factor(Site_filt)))+ 
+  geom_point(size=4)+
+  geom_line(size=1)+
+    ggtitle("A) Stream DOC")+
+    ylim(0,6)+
+    labs(color = "Stream Site",
+       y = "DOC (mg/L)",
+       x = element_blank())+
+  # geom_vline(xintercept = ymd_hms("2021-08-19 00:00:00"))+   
+  # geom_vline(xintercept = ymd_hms("2021-09-23 00:00:00"))+   
+  # geom_vline(xintercept = ymd_hms("2022-11-17 00:00:00"))+
+    scale_x_datetime(date_labels = "%b %y")+
+  theme_bw()+
+  theme(text = element_text(size = 21),
+        legend.position = "top",
+        legend.text = element_text(size = 18),
+        axis.text = element_text(size = 21))+
+  scale_color_manual(values = c("100" = "#0072B2", "300" = "#D55E00", "400" = "#CC79A7", "500" = "#999999"  ))
+
+
+res_doc <- chem %>% 
+  filter(Reservoir == "CCR",
+         Site %in% c(50,51),
+         DateTime >= ymd("2021-01-01"),
+         Depth_m != 15) %>% 
+  mutate(Depth_m = ifelse(Depth_m %in% c(20,21), 20, Depth_m)) %>%  
+  # select(Reservoir, Site_filt, DateTime, Depth_m, TN_ugL, TP_ugL, NO3NO2_ugL, NH4_ugL, SRP_ugL) %>% 
+  select(Reservoir, Site, DateTime, Depth_m, DOC_mgL) %>% 
+      filter(!is.na(DOC_mgL)) %>% 
+  ggplot(aes(x=DateTime, y = DOC_mgL, color = as.factor(Depth_m)))+ 
+  geom_point(size=4)+
+  geom_line(size=1)+
+    ggtitle("B) Reservoir DOC")+
+  labs(color = "Depth (m)",
+       y = "DOC (mg/L)",
+       x = element_blank())+
+      ylim(0,6)+
+  # geom_vline(xintercept = ymd_hms("2021-08-19 00:00:00"))+   
+  # geom_vline(xintercept = ymd_hms("2021-09-23 00:00:00"))+   
+  # geom_vline(xintercept = ymd_hms("2022-11-17 00:00:00"))+
+    scale_x_datetime(date_labels = "%b %y")+
+  theme_bw()+
+  theme(text = element_text(size = 21),
+        legend.position = "top",
+        legend.text = element_text(size = 18),
+        axis.text = element_text(size = 21))+
+  scale_color_manual(values = c("0.1" = "#000000", "1.5" = "#E69F00", "6" = "#56B4E9", "9" = "#009E73", "20" = "#F0E442"))
+
+
+# stream_doc | res_doc
+# ggsave("./ESA_figures/doc_combo.png", width = 21, height = 7, units = "in")
+
+## CV calcs
+stream_doc_CV <- chem %>% 
+  filter(Reservoir == "CCR",
+         Site > 51,
+         DateTime >= ymd("2021-01-01")) %>% 
+  mutate(Site_filt = ifelse(Site >= 100 & Site <200, 100, NA),
+         Site_filt = ifelse(Site >= 200 & Site <300, 200, Site_filt),
+         Site_filt = ifelse(Site >= 300 & Site <400, 300, Site_filt),
+         Site_filt = ifelse(Site >= 400 & Site <500, 400, Site_filt),
+         Site_filt = ifelse(Site >= 500, 500, Site_filt)
+         ) %>% 
+  filter(Site_filt != 200) %>%
+  # select(Reservoir, Site_filt, DateTime, Depth_m, TN_ugL, TP_ugL, NO3NO2_ugL, NH4_ugL, SRP_ugL) %>% 
+   select(Reservoir, Site_filt, DateTime, Depth_m, DOC_mgL) %>% 
+    filter(!is.na(DOC_mgL)) %>% 
+  group_by(Site_filt) %>% 
+  summarize(mean = mean(DOC_mgL, na.rm = T),
+            sd = sd(DOC_mgL, na.rm = T)) %>% 
+  mutate(CV = sd/mean)
+
+stream_doc_CV <- stream_doc_CV %>% 
+  rename(Depth_m = Site_filt) 
+
+stream_doc_CV
+
+res_doc_CV <- chem %>% 
+  filter(Reservoir == "CCR",
+         Site %in% c(50,51),
+         DateTime >= ymd("2021-01-01"),
+         Depth_m != 15) %>% 
+  mutate(Depth_m = ifelse(Depth_m %in% c(20,21), 20, Depth_m)) %>%  
+  # select(Reservoir, Site_filt, DateTime, Depth_m, TN_ugL, TP_ugL, NO3NO2_ugL, NH4_ugL, SRP_ugL) %>% 
+  select(Reservoir, Site, DateTime, Depth_m, DOC_mgL) %>% 
+      filter(!is.na(DOC_mgL)) %>% 
+  group_by(Depth_m) %>% 
+  summarize(mean = mean(DOC_mgL, na.rm = T),
+            sd = sd(DOC_mgL, na.rm = T)) %>% 
+  mutate(CV = sd/mean)
+
+res_doc_CV <- res_doc_CV 
+res_doc_CV
+
+CV_plotting <- rbind(stream_doc_CV, res_doc_CV) %>% 
+  mutate(Class = ifelse(Depth_m < 50, "Reservoir", "Stream")) %>% 
+  select(Class,  Depth_m, mean, sd, CV)
+  
+level_order <- c("Stream", "Reservoir")
+
+doc_cv_plot <- CV_plotting %>% 
+  ggplot(aes(x = Class, y = CV))+
+  geom_boxplot()+
+  geom_point(aes(x = Class, y = CV, color = as.factor(Depth_m)), position = position_jitter(), size = 4)+
+  labs(y = "DOC CV", x = element_blank())+
+  ggtitle("C) DOC CV")+
+  scale_x_discrete(limits = level_order) +
+  theme_bw()+
+  theme(text = element_text(size = 21),
+        legend.position = "none",
+        legend.text = element_text(size = 18),
+        axis.text = element_text(size = 21))+
+  scale_color_manual(values = c("0.1" = "#000000", "1.5" = "#E69F00", "6" = "#56B4E9", "9" = "#009E73", "20" = "#F0E442",
+                                 "100" = "#0072B2", "300" = "#D55E00", "400" = "#CC79A7", "500" = "#999999"  ))
+
+
+stream_doc | res_doc | doc_cv_plot
+
+ggsave("./doc_combo.png", width = 23, height = 7.5, units = "in")
 
 
 
