@@ -15,3 +15,5 @@ Each folder represent date samples were run and contains raw results from fluoro
 
 ### EEMs_Results.csv 
 This csv contains final EEMs results from every analysis date that are compiled from the results_YYYYMMDD_sampleID excel files 
+
+The other results csv contained a subset of EEMs_results.csv for plunge point samples in a format for plotting
