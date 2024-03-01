@@ -19,16 +19,34 @@ library(plotly)
 
 ```{r}
 ## EEMs plunge point data subset 
-eems_cove <- read.csv("./EEMs_Results_CCR_plungepoint_subset.csv")
-head(eems_cove)
+# eems_cove <- read.csv("./EEMs_Results_CCR_plungepoint_subset.csv")
+eems_cove <- read.csv("./EEMs_chem_2023_plungepoint.csv") |> 
+  filter(HIX > 0, HIX < 16) #remove crazy -200 and suspect 17 both in SMB
+
+##info on dataframe 
+#EEMS and lachat and DOC data in csv
+#sites are coded as: streams == X000, pool == X00, pelagic == 50, cove == X0, coveB == X
+##Distances from SMB 
+# Distance = ifelse(Site_num == 3000, 0, NA),
+# Distance = ifelse(Site_num == 300, 65, Distance),
+# Distance = ifelse(Site_num == 30, 430, Distance),
+# Distance = ifelse(Site_num == 3, 600, Distance), #fake distance for plotting
+# Distance = ifelse(Site_num == 50, 900, Distance) #fake distance for plotting
+         
+##Distances for HPB
+# Distance = ifelse(Site_num == 1000, 0, NA),
+# Distance = ifelse(Site_num == 100, 125, Distance), #fake distance for plotting
+# Distance = ifelse(Site_num == 10, 249, Distance),
+# Distance = ifelse(Site_num == 50, 900, Distance) #fake distance for plotting
+
 
 ```
 
 
-## Cove plotting
+## Site 50 plotting
 
 ```{r}
-## Site 50
+## HIX
 eems_cove |> 
   mutate(Date = mdy(Date)) |> 
   filter(Date < ymd("2023-08-08")) |> 
@@ -37,58 +55,194 @@ eems_cove |>
   ggplot(aes(x = Date, y = HIX, color = Depth_m))+
   geom_point()+
   # facet_wrap(~Date, ncol = 3)+
-  ggtitle("Site 50")+
+  ggtitle("Site 50 HIX")+
   theme_bw()+
     scale_color_manual(values = c("0.1" = "#000000", "1.5" = "#E69F00", "6" = "#56B4E9", "9" = "#009E73", "20" = "#F0E442"))
 
-
-## SMB plots 
+## DOC
 eems_cove |> 
   mutate(Date = mdy(Date)) |> 
   filter(Date < ymd("2023-08-08")) |> 
-  select(1:6, HIX) |> 
+  select(1:6, TOC_mgL) |> 
+  filter(Site == 50) |> 
+  ggplot(aes(x = Date, y = TOC_mgL, color = Depth_m))+
+  geom_point()+
+  # facet_wrap(~Date, ncol = 3)+
+  ggtitle("Site 50 DOC")+
+  theme_bw()+
+    scale_color_manual(values = c("0.1" = "#000000", "1.5" = "#E69F00", "6" = "#56B4E9", "9" = "#009E73", "20" = "#F0E442"))
+
+```
+
+
+## SMB
+
+```{r}
+levels_distances <- c("Stream", "Pool", "Cove A", "Cove B", "Site 50")
+
+## HIX
+# eems_cove |> 
+#   mutate(Date = mdy(Date)) |> 
+#   filter(Date < ymd("2023-08-08")) |> 
+#   select(1:6, HIX, TOC_mgL) |> 
+#   filter(Site_num %in% c(50,3,30,300,3000)) |> 
+#   mutate(Distance = ifelse(Site_num == 3000, "Stream", NA),
+#          Distance = ifelse(Site_num == 300, "Pool", Distance),
+#          Distance = ifelse(Site_num == 30, "Cove A", Distance),
+#          Distance = ifelse(Site_num == 3, "Cove B", Distance), 
+#          Distance = ifelse(Site_num == 50, "Site 50", Distance) 
+#          ) |> 
+#   mutate(Depth_m = ifelse(Depth_m == "SURF", 0.1, Depth_m),
+#          Depth_m = ifelse(Depth_m %in% c("BOT", "PD"), 1.5, Depth_m)) |> 
+#   ggplot(aes(x = factor(Distance, level = levels_distances), y = TOC_mgL, color = Depth_m))+
+#   geom_point()+
+#   #ylim(1,15)+ #one crazy outlier at -240, and one really high at 17
+#   facet_wrap(~Date, ncol = 1)+
+#   ggtitle("SMB HIX")+
+#   theme_bw()+
+#     scale_color_manual(values = c("0.1" = "#000000", "1.5" = "#E69F00", "6" = "#56B4E9", "9" = "#009E73", "20" = "#F0E442"))
+
+
+## grid variables
+eems_cove |> 
+  mutate(Date = mdy(Date)) |> 
+  filter(Date < ymd("2023-08-08")) |> 
+  select(1:6, HIX, BIX, FI, TOC_mgL, PO4_ugL) |> 
+  pivot_longer(-c(1:6)) |> 
   filter(Site_num %in% c(50,3,30,300,3000)) |> 
-  mutate(Distance = ifelse(Site_num == 3000, 0, NA),
-         Distance = ifelse(Site_num == 300, 65, Distance),
-         Distance = ifelse(Site_num == 30, 430, Distance),
-         Distance = ifelse(Site_num == 3, 600, Distance), #fake distance for plotting
-         Distance = ifelse(Site_num == 50, 900, Distance) #fake distance for plotting
+  mutate(Distance = ifelse(Site_num == 3000, "Stream", NA),
+         Distance = ifelse(Site_num == 300, "Pool", Distance),
+         Distance = ifelse(Site_num == 30, "Cove A", Distance),
+         Distance = ifelse(Site_num == 3, "Cove B", Distance), 
+         Distance = ifelse(Site_num == 50, "Site 50", Distance) 
          ) |> 
   mutate(Depth_m = ifelse(Depth_m == "SURF", 0.1, Depth_m),
          Depth_m = ifelse(Depth_m %in% c("BOT", "PD"), 1.5, Depth_m)) |> 
-  ggplot(aes(x = Distance, y = HIX, color = Depth_m))+
+  ggplot(aes(x = factor(Distance, level = levels_distances), y = value, color = Depth_m))+
   geom_point()+
-  geom_line()+
-  ylim(1,15)+ #one crazy outlier at -240, and one really high at 17
-  facet_wrap(~Date, ncol = 3)+
+  #ylim(1,15)+ #one crazy outlier at -240, and one really high at 17
+  facet_grid(name~Date, scales = "free_y")+
   ggtitle("SMB")+
   theme_bw()+
     scale_color_manual(values = c("0.1" = "#000000", "1.5" = "#E69F00", "6" = "#56B4E9", "9" = "#009E73", "20" = "#F0E442"))
 
-## HPB plots 
+```
+
+
+## HPB
+
+```{r}
+levels_distances <- c("Stream", "Pool", "Cove A", "Cove B", "Site 50")
+
+## HIX 
+# eems_cove |> 
+#   mutate(Date = mdy(Date)) |> 
+#   filter(Date > ymd("2023-05-04"),
+#          Date < ymd("2023-08-08")) |> 
+#   select(1:6, HIX) |> 
+#   filter(Site_num %in% c(50,1,10,100,1000)) |> 
+#   mutate(Distance = ifelse(Site_num == 1000, "Stream", NA),
+#         Distance = ifelse(Site_num == 100, "Pool", Distance),
+#         Distance = ifelse(Site_num == 10, "Cove A", Distance),
+#         Distance = ifelse(Site_num == 50, "Site 50", Distance)
+#          ) |> 
+#     mutate(Depth_m = ifelse(Depth_m == "SURF", 0.1, Depth_m),
+#          Depth_m = ifelse(Depth_m %in% c("BOT", "PD"), 1.5, Depth_m)) |> 
+#   ggplot(aes(x = factor(Distance, level = levels_distances), y = HIX, color = Depth_m))+
+#   geom_point()+
+#   facet_wrap(~Date, ncol = 1)+
+#   ylim(1,15)+
+#   ggtitle("HPB HIX")+
+#   theme_bw()+
+#     scale_color_manual(values = c("0.1" = "#000000", "1.5" = "#E69F00", "6" = "#56B4E9", "9" = "#009E73", "20" = "#F0E442"))
+
+
+## grid variables
 eems_cove |> 
   mutate(Date = mdy(Date)) |> 
-  filter(Date > ymd("2023-05-04"),
+  filter(Date > ymd("2023-05-08"),
          Date < ymd("2023-08-08")) |> 
-  select(1:6, HIX) |> 
+  select(1:6, HIX, BIX, FI, TOC_mgL, PO4_ugL) |> 
+  pivot_longer(-c(1:6)) |> 
   filter(Site_num %in% c(50,1,10,100,1000)) |> 
-  mutate(Distance = ifelse(Site_num == 1000, 0, NA),
-        Distance = ifelse(Site_num == 100, 125, Distance), #fake distance for plotting
-        Distance = ifelse(Site_num == 10, 249, Distance),
-        Distance = ifelse(Site_num == 50, 900, Distance) #fake distance for plotting
-         ) |> 
-    mutate(Depth_m = ifelse(Depth_m == "SURF", 0.1, Depth_m),
+  mutate(Distance = ifelse(Site_num == 1000, "Stream", NA),
+        Distance = ifelse(Site_num == 100, "Pool", Distance),
+        Distance = ifelse(Site_num == 10, "Cove A", Distance),
+        Distance = ifelse(Site_num == 50, "Site 50", Distance)
+         ) |>  
+  mutate(Depth_m = ifelse(Depth_m == "SURF", 0.1, Depth_m),
          Depth_m = ifelse(Depth_m %in% c("BOT", "PD"), 1.5, Depth_m)) |> 
-  ggplot(aes(x = Distance, y = HIX, color = Depth_m))+
+  ggplot(aes(x = factor(Distance, level = levels_distances), y = value, color = Depth_m))+
   geom_point()+
-  geom_line()+
-  facet_wrap(~Date, ncol = 3)+
-  ylim(1,15)+
+  facet_grid(name~Date, scales = "free_y")+
   ggtitle("HPB")+
   theme_bw()+
     scale_color_manual(values = c("0.1" = "#000000", "1.5" = "#E69F00", "6" = "#56B4E9", "9" = "#009E73", "20" = "#F0E442"))
+
+
+  
+```
+
+## YSI 
+
+```{r}
+#set up data
+levels_distances <- c("Stream", "Pool 1", "Pool 2", "Pool 3", "Pool 4", "Cove A", "Cove B", "Site 50")
+
+ysi <- read.csv("./ccr_2023_YSI.csv")
+
+##SMB
+ysi |> 
+  mutate(DateTime = mdy_hm(DateTime),
+         DateTime = as.Date(DateTime)) |> 
+  select(-Notes) |> 
+  pivot_longer(-c(1:5)) |> 
+  filter(name %in% c("Temp_C", "DO_mgL", "SpCond_uScm")) |> 
+  filter(Site_EEM %in% c(30,301,300,299,298,3000)) |> 
+  #filter(Site_EEM %in% c(50,3,30,300,3000)) |> 
+  mutate(Distance = ifelse(Site_EEM == 3000, "Stream", NA),
+        Distance = ifelse(Site_EEM == 301, "Pool 1", Distance),
+        Distance = ifelse(Site_EEM == 300, "Pool 2", Distance),
+        Distance = ifelse(Site_EEM == 299, "Pool 3", Distance),
+        Distance = ifelse(Site_EEM == 298, "Pool 4", Distance),
+        Distance = ifelse(Site_EEM == 30, "Cove A", Distance),
+        Distance = ifelse(Site_EEM == 3, "Cove B", Distance),
+        Distance = ifelse(Site_EEM == 50, "Site 50", Distance)
+         ) |>  
+  ggplot(aes(x = factor(Distance, level = levels_distances), y = value, color = Depth_m))+
+  geom_point()+
+  facet_grid(name~DateTime, scales = "free_y")+
+  ggtitle("SMB")+
+  theme_bw()
+
+
+##HPB
+ysi |> 
+  mutate(DateTime = mdy_hm(DateTime),
+         DateTime = as.Date(DateTime)) |> 
+  select(-Notes) |> 
+  pivot_longer(-c(1:5)) |> 
+  filter(name %in% c("Temp_C", "DO_mgL", "SpCond_uScm")) |> 
+  filter(Site_EEM %in% c(10,100,1000)) |> 
+  #filter(Site_EEM %in% c(50,1,10,100,1000)) |> 
+  mutate(Distance = ifelse(Site_EEM == 1000, "Stream", NA),
+        Distance = ifelse(Site_EEM == 100, "Pool 1", Distance),
+        Distance = ifelse(Site_EEM == 10, "Cove A", Distance),
+        Distance = ifelse(Site_EEM == 1, "Cove B", Distance),
+        Distance = ifelse(Site_EEM == 50, "Site 50", Distance)
+         ) |>  
+  ggplot(aes(x = factor(Distance, level = levels_distances), y = value, color = Depth_m))+
+  geom_point()+
+  facet_grid(name~DateTime, scales = "free_y")+
+  ggtitle("HPB")+
+  theme_bw()
   
 
-
 ```
+
+
+
+
+
+
 
