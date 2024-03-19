@@ -267,6 +267,24 @@ ysi |>
 
 ```
 
+## Discharge 
+
+```{r}
+
+q <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/454/7/702d3b355854211a8dbb587094cfccb7")
+
+q |> 
+  filter(Reservoir == "CCR",
+         year(DateTime) == 2023)  |> 
+  mutate(Site = ifelse(Site == 301, 300, Site)) |> 
+  ggplot(aes(x = DateTime, y = Flow_cms, color = as.factor(Site)))+
+  geom_line()+
+  geom_point()+
+  theme_classic() + theme(text = element_text(size = 14))
+  
+
+
+```
 
 
 
