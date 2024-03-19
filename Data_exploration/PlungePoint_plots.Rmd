@@ -286,6 +286,46 @@ q |>
 
 ```
 
+## Precip 
+
+```{r}
+ccr_met <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1105/2/5c9281623ab7676ca1be85ee1761bf28")
+
+ccr_met |> 
+  filter(year(DateTime) == 2023) |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  filter(Date > ymd("2023-04-01"),
+         Date < ymd("2023-08-01")) |>
+  group_by(Date) |> 
+  summarize(daily_precip = sum(Rain_Total_mm)) |> 
+  ggplot(aes(x = Date, y = daily_precip))+
+  geom_point()+
+  #geom_line()+
+  geom_vline(xintercept = c(ymd("2023-05-04"), ymd("2023-06-01"), ymd("2023-06-30")), linewidth = 1, linetype = 2)+
+  theme_classic() + theme(text = element_text(size = 14))
+
+```
+
+
+## Chl-a from dam
+
+```{r}
+ccr_dam <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/2/ea78dd541e089687af1f4c4b550bc9ca")
+
+ccr_dam |> 
+  filter(year(DateTime) == 2023) |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  filter(Date > ymd("2023-04-01"),
+         Date < ymd("2023-08-01")) |>
+  group_by(Date) |> 
+  summarize(daily_chla = mean(EXOChla_ugL_1, na.rm = T)) |> 
+  ggplot(aes(x = Date, y = daily_chla))+
+  geom_point()+
+  geom_line()+
+  geom_vline(xintercept = c(ymd("2023-05-04"), ymd("2023-06-01"), ymd("2023-06-30")), linewidth = 1, linetype = 2)+
+  theme_classic()
+
+```
 
 
 
