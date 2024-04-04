@@ -433,6 +433,9 @@ q |>
 ```{r}
 ccr_met <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1105/2/5c9281623ab7676ca1be85ee1761bf28")
 
+ccr_met_git <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data/ccre-met.csv", skip = 1) |> dplyr::slice(-c(1:2))
+
+#rain
 ccr_met |> 
   filter(year(DateTime) == 2023) |> 
   mutate(Date = as.Date(DateTime)) |> 
@@ -447,6 +450,49 @@ ccr_met |>
   labs(x = "Date", y = "Total Rain (mm)")+
   geom_vline(xintercept = c( ymd("2023-06-01"), ymd("2023-06-30")), linewidth = 1, linetype = 2)+
   theme_classic() + theme(text = element_text(size = 16))
+
+#bar pressure
+ccr_met |> 
+  #filter(year(DateTime) == 2023) |>
+  mutate(Date = as.Date(DateTime)) |>
+  filter(Date > ymd("2024-04-01")
+         #Date < ymd("2023-06-10")
+         ) |>
+  # group_by(Date) |> 
+  # summarize(BP_Average_kPa = mean(BP_Average_kPa, na.rm = T)) |> 
+  ggplot(aes(x = DateTime, y = BP_Average_kPa))+
+  geom_point()+
+  #geom_line()+
+  labs(x = "Date", y = "BP (kPa)")+
+  theme_classic() + theme(text = element_text(size = 16))
+
+
+roa_noaa <- read.csv("C:/Users/dwh18/Downloads/ROA_met_4apr24.csv") |> 
+  mutate(DateTime = paste("2024-04-", Date, " ", Time, sep = ""),
+         DateTime = ymd_hm(DateTime))
+
+
+
+ccr_met_git |> 
+  #filter(year(DateTime) == 2023) |>
+  rename(DateTime = TIMESTAMP) |> 
+  mutate(Date = as.Date(DateTime),
+         DateTime = ymd_hms(DateTime),
+         BP_kPa_Avg = as.numeric(BP_kPa_Avg),
+         BP_inHg = BP_kPa_Avg*0.2953) |>
+  filter(Date > ymd("2024-03-31")
+         #Date < ymd("2023-06-10")
+         ) |>
+  # group_by(Date) |> 
+  # summarize(BP_Average_kPa = mean(BP_Average_kPa, na.rm = T)) |> 
+  ggplot(aes(x = DateTime, y = BP_inHg, color = "CCR met"))+
+  geom_point()+
+  geom_point(data = roa_noaa, aes(x= DateTime, y = BP_inHg, color = "ROA met"))+
+  #geom_line()+
+  labs(x = "Date", y = "BP (inHg)", title = "CCR vs ROA Barometric Pressure")+
+  theme_classic() + theme(text = element_text(size = 16))
+
+
 
 ```
 
