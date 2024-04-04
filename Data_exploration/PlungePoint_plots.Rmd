@@ -433,9 +433,9 @@ q |>
 ```{r}
 ccr_met <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1105/2/5c9281623ab7676ca1be85ee1761bf28")
 
-ccr_met_git <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data/ccre-met.csv", skip = 1) |> dplyr::slice(-c(1:2))
+# ccr_met_git <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data/ccre-met.csv", skip = 1) |> dplyr::slice(-c(1:2))
 
-#rain
+#### rain 2023
 ccr_met |> 
   filter(year(DateTime) == 2023) |> 
   mutate(Date = as.Date(DateTime)) |> 
@@ -451,46 +451,60 @@ ccr_met |>
   geom_vline(xintercept = c( ymd("2023-06-01"), ymd("2023-06-30")), linewidth = 1, linetype = 2)+
   theme_classic() + theme(text = element_text(size = 16))
 
-#bar pressure
+#### bar pressure
+# ROA elevation: 346.7m; CCR dam elevation: 356.6 based on bathy
+
+
+#roa met from 1 - 3 apr 24
+# roa_noaa_4apr <- read.csv("C:/Users/dwh18/Downloads/ROA_met_4apr24.csv") |> 
+#   mutate(DateTime = paste("2024-04-", Date, " ", Time, sep = ""),
+#          DateTime = ymd_hm(DateTime))
+
+#roa met 2023
+roa_noaa_2023 <- read.csv("C:/Users/dwh18/Downloads/ROA_2023_local_met.csv") |> 
+  mutate(DateTime = gsub("T", " ", DATE),
+         DateTime = ymd_hms(DateTime)) |> 
+  select(DateTime, everything()) |> 
+  filter(REPORT_TYPE == "FM-15") |>  #code for routine hourly weather conditoin at air terminals
+    mutate(Date = as.Date(DateTime)) |>
+    filter(Date > ymd("2023-05-01"),
+         Date < ymd("2023-08-01"))
+
+
+##ccr met vs roa 2023
 ccr_met |> 
-  #filter(year(DateTime) == 2023) |>
-  mutate(Date = as.Date(DateTime)) |>
-  filter(Date > ymd("2024-04-01")
-         #Date < ymd("2023-06-10")
-         ) |>
-  # group_by(Date) |> 
-  # summarize(BP_Average_kPa = mean(BP_Average_kPa, na.rm = T)) |> 
-  ggplot(aes(x = DateTime, y = BP_Average_kPa))+
-  geom_point()+
-  #geom_line()+
-  labs(x = "Date", y = "BP (kPa)")+
-  theme_classic() + theme(text = element_text(size = 16))
-
-
-roa_noaa <- read.csv("C:/Users/dwh18/Downloads/ROA_met_4apr24.csv") |> 
-  mutate(DateTime = paste("2024-04-", Date, " ", Time, sep = ""),
-         DateTime = ymd_hm(DateTime))
-
-
-
-ccr_met_git |> 
-  #filter(year(DateTime) == 2023) |>
-  rename(DateTime = TIMESTAMP) |> 
+  filter(year(DateTime) == 2023) |>
   mutate(Date = as.Date(DateTime),
          DateTime = ymd_hms(DateTime),
-         BP_kPa_Avg = as.numeric(BP_kPa_Avg),
-         BP_inHg = BP_kPa_Avg*0.2953) |>
-  filter(Date > ymd("2024-03-31")
-         #Date < ymd("2023-06-10")
-         ) |>
-  # group_by(Date) |> 
-  # summarize(BP_Average_kPa = mean(BP_Average_kPa, na.rm = T)) |> 
+         BP_inHg = BP_Average_kPa*0.2953) |>
+      filter(Date > ymd("2023-05-01"),
+         Date < ymd("2023-08-01")) |>
   ggplot(aes(x = DateTime, y = BP_inHg, color = "CCR met"))+
   geom_point()+
-  geom_point(data = roa_noaa, aes(x= DateTime, y = BP_inHg, color = "ROA met"))+
-  #geom_line()+
+  geom_point(data = roa_noaa_2023, aes(x= DateTime, y = HourlyStationPressure, color = "ROA met"))+
   labs(x = "Date", y = "BP (inHg)", title = "CCR vs ROA Barometric Pressure")+
   theme_classic() + theme(text = element_text(size = 16))
+
+
+## ccr met vs roa april 2024
+# ccr_met_git |> 
+#   #filter(year(DateTime) == 2023) |>
+#   rename(DateTime = TIMESTAMP) |> 
+#   mutate(Date = as.Date(DateTime),
+#          DateTime = ymd_hms(DateTime),
+#          BP_kPa_Avg = as.numeric(BP_kPa_Avg),
+#          BP_inHg = BP_kPa_Avg*0.2953) |>
+#   filter(Date > ymd("2024-03-31")
+#          #Date < ymd("2023-06-10")
+#          ) |>
+#   # group_by(Date) |> 
+#   # summarize(BP_Average_kPa = mean(BP_Average_kPa, na.rm = T)) |> 
+#   ggplot(aes(x = DateTime, y = BP_inHg, color = "CCR met"))+
+#   geom_point()+
+#   geom_point(data = roa_noaa_4apr, aes(x= DateTime, y = BP_inHg, color = "ROA met"))+
+#   #geom_line()+
+#   labs(x = "Date", y = "BP (inHg)", title = "CCR vs ROA Barometric Pressure")+
+#   theme_classic() + theme(text = element_text(size = 16))
 
 
 
