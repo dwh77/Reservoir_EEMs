@@ -397,6 +397,68 @@ ggplot(aes(x = factor(Distance, level = levels_distances), y = value, color = fa
 
 ```
 
+## IC
+
+```{r}
+icdata <- read.csv("./EEMs_chem_2023_plungepoint.csv")
+icdata <- replace(icdata, icdata =="n.a.", NA) #set values below detection to NA 
+
+levels_distances_ic <- c("Stream", "Pool", "Cove A", "Cove B", "Site 50")
+
+levels_depth <- c(0.1, 1.5, 6, 9, 20)
+
+## grid variables SITE as factor 
+icdata |> 
+  mutate(Date = mdy(Date)) |> 
+  filter(Date > ymd("2023-05-08"),
+         Date < ymd("2023-08-08")) |> 
+  select(1:6, Cl_ugL) |> 
+  filter(Site_num %in% c(50,1,10,100,1000)) |> 
+    pivot_longer(-c(1:6)) |> 
+  mutate(Distance = ifelse(Site_num == 1000, "Stream", NA),
+        Distance = ifelse(Site_num == 100, "Pool", Distance),
+        Distance = ifelse(Site_num == 10, "Cove A", Distance),
+        Distance = ifelse(Site_num == 1, "Cove B", Distance),
+        Distance = ifelse(Site_num == 50, "Site 50", Distance)
+         ) |>
+  mutate(Depth_m = ifelse(Depth_m == "SURF", 0.1, Depth_m),
+         Depth_m = ifelse(Depth_m %in% c("BOT", "PD"), 1.5, Depth_m)) |> 
+  ggplot(aes(x = factor(Distance, level = levels_distances_ic), y = value, color = factor(Depth_m, levels = levels_depth)))+ 
+  geom_point()+
+  facet_grid(factor(name)~Date, scales = "free_y")+ #name, , levels = c("BIX", "HIX", "DOC_mgL")
+  labs(y = "value", x = "Site", title = "HPB", color = "Depth (m)")+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
+    scale_color_manual(values = c("0.1" = "#000000", "1.5" = "#E69F00", "6" = "#56B4E9", "9" = "#009E73", "20" = "#F0E442"))
+
+
+
+icdata |> 
+  mutate(Date = mdy(Date)) |> 
+  filter(Date > ymd("2023-05-08"),
+         Date < ymd("2023-08-08")) |> 
+  select(1:6, Cl_ugL) |> 
+  filter(Site_num %in% c(50,3,30,300,3000)) |> 
+    pivot_longer(-c(1:6)) |> 
+  mutate(Distance = ifelse(Site_num == 3000, "Stream", NA),
+        Distance = ifelse(Site_num == 300, "Pool", Distance),
+        Distance = ifelse(Site_num == 30, "Cove A", Distance),
+        Distance = ifelse(Site_num == 3, "Cove B", Distance),
+        Distance = ifelse(Site_num == 50, "Site 50", Distance)
+         ) |>
+  mutate(Depth_m = ifelse(Depth_m == "SURF", 0.1, Depth_m),
+         Depth_m = ifelse(Depth_m %in% c("BOT", "PD"), 1.5, Depth_m)) |> 
+  ggplot(aes(x = factor(Distance, level = levels_distances_ic), y = value, color = factor(Depth_m, levels = levels_depth)))+ 
+  geom_point()+
+  facet_grid(factor(name)~Date, scales = "free_y")+ #name, , levels = c("BIX", "HIX", "DOC_mgL")
+  labs(y = "value", x = "Site", title = "SMB", color = "Depth (m)")+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
+    scale_color_manual(values = c("0.1" = "#000000", "1.5" = "#E69F00", "6" = "#56B4E9", "9" = "#009E73", "20" = "#F0E442"))
+
+
+
+
+```
+
 
 ## Discharge 
 
