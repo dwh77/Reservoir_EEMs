@@ -23,7 +23,11 @@ library(viridis)
 # eems_cove <- read.csv("./EEMs_Results_CCR_plungepoint_subset.csv")
 eems_cove <- read.csv("./EEMs_chem_2023_plungepoint.csv") |> 
   rename(DOC_mgL = TOC_mgL) |> 
-  filter(HIX > 0, HIX < 16) #remove crazy -200 and suspect 17 both in SMB
+  mutate(HIX = ifelse(HIX < 0, NA, HIX),
+         HIX = ifelse(HIX > 16, NA, HIX),
+         BIX = ifelse(HIX < 0, NA, BIX),
+         BIX = ifelse(HIX > 16, NA, BIX))
+  #filter(HIX > 0, HIX < 16) #remove crazy -200 and suspect 17 both in SMB
 
 ##info on dataframe 
 #EEMS and lachat and DOC data in csv
@@ -349,15 +353,15 @@ eems_hpb_cove <- eems_cove |>
   mutate(Date = mdy(Date)) |> 
   filter(Date > ymd("2023-05-08"),
          Date < ymd("2023-08-08")) |> 
-  select(1:6, HIX, BIX, DOC_mgL) |> 
-  filter(Site_num %in% c(50,10,100,1000)) |> 
+  select(1:6, HIX, BIX, Cl_ugL, DOC_mgL) |> 
+  filter(Site_num %in% c(50, 1, 10,100,1000)) |> 
   pivot_longer(-c(1:6)) |> 
   select(Site_num, Date, Depth_m, name, value)
 
 eems_hpb_ysi <- ysi |> 
   mutate(DateTime = mdy_hm(DateTime),
          DateTime = as.Date(DateTime)) |> 
-    filter(Site_EEM %in% c(50,10,100,1000)) |> 
+    filter(Site_EEM %in% c(50, 1, 10,100,1000)) |> 
   select(-Notes) |> 
   pivot_longer(-c(1:5)) |> 
   filter(name %in% c("Temp_C", "DO_mgL", "SpCond_uScm")) |> 
@@ -366,15 +370,16 @@ eems_hpb_ysi <- ysi |>
   select(Site_num, Date, Depth_m, name, value)
 
 ##plot
-levels_distances <- c("Stream", "Pool", "Cove", "Site 50")
+levels_distances <- c("Stream", "Pool", "Cove A", "Cove B", "Dam")
 
 depths <- c(0.1, 0.5, 1, 6, 9, 20)
 
 rbind(eems_hpb_cove, eems_hpb_ysi) |> 
  mutate(Distance = ifelse(Site_num == 1000, "Stream", NA),
         Distance = ifelse(Site_num == 100, "Pool", Distance),
-        Distance = ifelse(Site_num == 10, "Cove", Distance),
-        Distance = ifelse(Site_num == 50, "Site 50", Distance)
+        Distance = ifelse(Site_num == 10, "Cove A", Distance),
+        Distance = ifelse(Site_num == 1, "Cove B", Distance),
+        Distance = ifelse(Site_num == 50, "Dam", Distance)
          ) |>
   mutate(Depth_m = ifelse(Depth_m == "SURF", 0.1, Depth_m),
          Depth_m = ifelse(Depth_m == "BOT", 0.4, Depth_m),
@@ -383,16 +388,16 @@ rbind(eems_hpb_cove, eems_hpb_ysi) |>
          Depth_m = ifelse(Depth_m == 0.4, 1, Depth_m)) |> 
   mutate(Depth_m = as.numeric(Depth_m)) |> 
   filter(Depth_m %in% depths,
-         name %in% c("BIX", "HIX", "DOC_mgL", "Temp_C")) |> 
+         name %in% c("BIX", "HIX", "DOC_mgL", "Cl_ugL", "Temp_C")) |> 
 ggplot(aes(x = factor(Distance, level = levels_distances), y = value, color = factor(Depth_m, levels = depths),
            group = factor(Depth_m, level = depths)))+ 
   geom_point(size = 2)+
-  geom_line()+
-  facet_grid(factor(name, levels = c("BIX", "HIX", "DOC_mgL", "Temp_C"))~Date, scales = "free_y")+
+  #geom_line()+
+  facet_grid(factor(name, levels = c("BIX", "HIX", "DOC_mgL", "Cl_ugL", "Temp_C"))~Date, scales = "free_y")+
   labs(y = "value", x = "Site", color = "Depth (m)")+
   theme_bw()+ 
   theme(legend.position = "top", text = element_text(size = 16))+ guides(color = guide_legend(nrow = 1))+
-  scale_color_manual(values = c("0.1" = "#000000", "0.5" = "red", "1" = "#E69F00", "6" = "#56B4E9", "9" = "#009E73", "20" = "#F0E442"))
+  scale_color_manual(values = c("0.1" = "#000000",  "1" = "#E69F00", "6" = "#56B4E9", "9" = "#009E73", "20" = "#F0E442")) #"0.5" = "red",
 
 
 ```
