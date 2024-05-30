@@ -1,0 +1,269 @@
+---
+title: "EEMs exploration"
+author: "Dexter Howard"
+date: "2023-06-23"
+output: html_document
+---
+
+## Read in packages 
+
+```{r, include = F}
+library(tidyverse)
+# library(scales) #for date format on plots
+# library(patchwork) #arrange figures w/ slashes and lines
+# library(plotly)
+# library(viridis)
+
+```
+
+
+
+## HOBO water level calculations
+
+```{r}
+########### get data ###############
+
+### CCR met 
+#ccr_met_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1105/2/5c9281623ab7676ca1be85ee1761bf28")
+ccr_met_git <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data-qaqc/ccre_met_L1.csv") 
+
+##format for bind 
+ccr_met_bind <- ccr_met_git |> 
+  select(DateTime, BP_Average_kPa, Flag_BP_Average_kPa) |> 
+  mutate(Date = as.Date(DateTime),
+         Hour = hour(DateTime),
+         Min = minute(DateTime)) |> 
+  filter(Min %in% c(0,10,20,30,40,50)) |>  #get just minutes to line up w/ HOBO
+  rename(DateTime_EST = DateTime) |> 
+  select(DateTime_EST, BP_Average_kPa, Flag_BP_Average_kPa) 
+#check BP flag
+  
+
+### HOBO water level
+hobo_22may24 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/HPB_waterlevel/hobo_hpb_22may24.csv", skip = 1)
+
+hobo_bind <- hobo_22may24 |> 
+  rename(DateTime_EDT = 2, 
+         HOBO_Abs_Pres_kPa = 3,
+         Temp_C = 4) |> 
+  select(DateTime_EDT, HOBO_Abs_Pres_kPa, Temp_C) |> 
+  mutate(DateTime_EDT = mdy_hms(DateTime_EDT)) |> 
+  mutate(Date = as.Date(DateTime_EDT),
+         Hour = hour(DateTime_EDT),
+         Min = minute(DateTime_EDT)) |> 
+  mutate(Time_EST = paste(Hour+1, Min, 00, sep = ":"),
+         DateTime_EST = ymd_hms(paste(Date, Time_EST, sep = " "))  ) |> 
+  select(DateTime_EST, HOBO_Abs_Pres_kPa, Temp_C)
+
+
+############## bind data and calculate water level #######################
+
+waterlevel_correct <- left_join(hobo_bind, ccr_met_bind, by = "DateTime_EST") |> 
+  select(-Flag_BP_Average_kPa) |> 
+  mutate(corrected_Pres_kPa = HOBO_Abs_Pres_kPa - BP_Average_kPa) |> 
+  mutate(waterlevel_cm = corrected_Pres_kPa * 10.1972)
+
+
+############### plot data ######################3
+
+waterlevel_correct |> 
+  ggplot()+
+  geom_line(aes(x=DateTime_EST, y = BP_Average_kPa, color = "MET"))+  
+  geom_line(aes(x=DateTime_EST, y = HOBO_Abs_Pres_kPa, color = "HOBO_raw"))+
+  geom_line(aes(x=DateTime_EST, y = corrected_Pres_kPa + 95, color = "HOBO_correct + 95"))
+
+waterlevel_correct |> 
+  ggplot(aes(x = DateTime_EST, y = waterlevel_cm))+
+  geom_line()
+
+
+```
+
+
+
+
+## Temp/Cond across sites
+
+Get YSI data 
+
+```{r}
+## YSI data
+ysi_gsheet <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1HbSBEFjMuK4Lxit5MRbATeiyljVAB-cpUNxO3dKd8V8/edit#gid=1787819257")
+
+ccr_ysi <- ysi_gsheet |> 
+  filter(Reservoir == "CCR") |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  filter(year(Date) > 2023)
+
+```
+
+Get CTD Data
+
+```{r}
+### read in raw data 
+ctd_052224_site50 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/Raw_CTD/csv_outputs/052224_ccr50_S7809003.csv")
+
+ctd_052224_site88 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/Raw_CTD/csv_outputs/052224_ccr88_S7809004.csv")
+
+ctd_052224_site90 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/Raw_CTD/csv_outputs/052224_ccr90_S7809005.csv")
+
+###format data
+#function to clean ctd casts
+ccr_ctd_clean <- function(data){
+
+  #slice by depth for each reservoir
+    depths = seq(0.1, 23, by = 0.3)
+    df.final<-data.frame()
+
+ for (i in 1:length(depths)){
+      
+      fp_layer <- data %>% 
+        mutate(Date = as.Date(DateTime)) |> 
+        group_by(Date) |>  
+        slice(which.min(abs(as.numeric(Depth_m) - depths[i])))
+      
+      # Bind each of the data layers together.
+      df.final = bind_rows(df.final, fp_layer)%>%
+      mutate(Depth_m = round(Depth_m, digits = 1)) |> 
+       dplyr::distinct() 
+ }
+    return(df.final)
+}
+
+
+###clean up ctd 
+site50_22may24 <- ccr_ctd_clean(ctd_052224_site50) |> 
+  mutate(Site = 50, Reservoir = "CCR") 
+
+site88_22may24 <- ccr_ctd_clean(ctd_052224_site88) |> 
+  mutate(Site = 88, Reservoir = "CCR") 
+
+site90_22may24 <- ccr_ctd_clean(ctd_052224_site90) |> 
+  mutate(Site = 90, Reservoir = "CCR") 
+
+ctd_22may24 <- rbind(site50_22may24, site88_22may24, site90_22may24) |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  select(Reservoir, Site, Date, everything())
+
+```
+
+CTD plots 
+
+```{r}
+ctd_22may24 |> 
+  pivot_longer(-c(1:5)) |> 
+  filter(name %in% c("Temp_C", "SpCond_uScm", "DO_mgL")) |> 
+  # filter(Site == 50) |> 
+  ggplot(aes(x = value, y = Depth_m))+
+  geom_line(orientation = "y")+
+  scale_y_reverse()+
+  facet_grid(Site~name, scales = "free")+
+  theme_bw()
+
+```
+
+bring CTD to YSI
+
+```{r}
+##bind data togheter
+head(ctd_22may24)
+head(ccr_ysi)
+
+ctd_bind <- ctd_22may24 |> 
+  select(Reservoir, Site, Date, Depth_m, Temp_C, DO_mgL, SpCond_uScm)
+
+ysi_bind <- ccr_ysi |> 
+  select(Reservoir, Site, Date, Depth_m, Temp_C, DO_mgL, SpCond_uScm) |> 
+  filter(!Site %in% c(88,90))
+
+sensor_22may24 <- rbind(ctd_bind, ysi_bind) |> 
+  mutate(Distance = ifelse(Site == 101, 0, NA),
+         Distance = ifelse(Site == 100, 407, Distance),
+         Distance = ifelse(Site == 98, 619, Distance),
+         Distance = ifelse(Site == 96, 790, Distance),
+         Distance = ifelse(Site == 94, 1015, Distance),
+         Distance = ifelse(Site == 92, 1132, Distance),
+         Distance = ifelse(Site == 90, 1843, Distance),
+         Distance = ifelse(Site == 88, 3326, Distance),
+         Distance = ifelse(Site == 50, 5011, Distance)
+         ) |> 
+  select(Reservoir, Site, Date, Depth_m, Distance, everything())
+
+
+##facet plots
+sensor_22may24 |> 
+  pivot_longer(-c(1:5)) |> 
+  # filter(name %in% c("Temp_C")) |> 
+  ggplot(aes(x = value, y = Depth_m))+
+  geom_point()+
+  # geom_line(orientation = "y")+
+  scale_y_reverse()+
+  facet_grid(Site~name, scales = "free")
+
+
+##previous style plot
+levels_sites <- c(101, 100, 98, 96, 94, 92, 90, 88, 50)
+
+sensor_22may24 |> 
+  pivot_longer(-c(1:5)) |> 
+  ggplot(aes(x = factor(Site, level = levels_sites), y = value, color = Depth_m))+
+  geom_point()+
+  facet_wrap(~name, nrow = 3, scales = "free_y")+
+  # labs(title = "HPB", y = "Temp (C)", x = "Site")+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
+  scale_color_gradient("Depth_m",  high = "red", low = "blue") 
+  
+
+sensor_22may24 |> 
+  pivot_longer(-c(1:5)) |> 
+  ggplot(aes(x = Distance, y = value, color = Depth_m))+
+  geom_point()+
+  facet_wrap(~name, nrow = 3, scales = "free_y")+
+  # labs(title = "HPB", y = "Temp (C)", x = "Site")+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
+  scale_color_gradient("Depth_m",  high = "red", low = "blue") 
+
+####try heatmap
+fp_new <- sensor_22may24
+
+#Temp
+  interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$Temp_C,
+                   xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10),
+                   yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.1),
+                   extrap = T, linear = T, duplicate = "strip")
+  interp_temp <- akima::interp2xyz(interp_temp, data.frame=T)
+
+ggplot(interp_temp, aes(x=x, y=y))+
+    geom_raster(aes(fill=z))+
+    scale_y_reverse(expand = c(0,0))+
+    scale_x_continuous(expand = c(0, 0)) +
+    geom_point(data = sensor_22may24, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark cast sites 
+    scale_fill_gradientn(colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "Temp CCR 22may24")+
+    theme_bw()
+  
+  
+#Cond
+  interp_spcond <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$SpCond_uScm,
+                   xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10),
+                   yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.1),
+                   extrap = T, linear = T, duplicate = "strip")
+  interp_spcond <- akima::interp2xyz(interp_spcond, data.frame=T)
+  
+ggplot(interp_spcond, aes(x=x, y=y))+
+    geom_raster(aes(fill=z))+
+    scale_y_reverse(expand = c(0,0))+
+    scale_x_continuous(expand = c(0, 0)) +
+    geom_point(data = sensor_22may24, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark cast sites 
+    scale_fill_gradientn(colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "Sp.Cond CCR 22may24")+
+    theme_bw()
+
+```
+
+
+
+
+
+
+
