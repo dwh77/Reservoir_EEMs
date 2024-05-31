@@ -177,17 +177,17 @@ ysi_bind <- ccr_ysi |>
   filter(!Site %in% c(88,90))
 
 sensor_22may24 <- rbind(ctd_bind, ysi_bind) |> 
-  mutate(Distance = ifelse(Site == 101, 0, NA),
-         Distance = ifelse(Site == 100, 407, Distance),
-         Distance = ifelse(Site == 98, 619, Distance),
-         Distance = ifelse(Site == 96, 790, Distance),
-         Distance = ifelse(Site == 94, 1015, Distance),
-         Distance = ifelse(Site == 92, 1132, Distance),
-         Distance = ifelse(Site == 90, 1843, Distance),
-         Distance = ifelse(Site == 88, 3326, Distance),
-         Distance = ifelse(Site == 50, 5011, Distance)
+  mutate(Distance_ft = ifelse(Site == 101, 0, NA),
+         Distance_ft = ifelse(Site == 100, 407, Distance_ft),
+         Distance_ft = ifelse(Site == 98, 619, Distance_ft),
+         Distance_ft = ifelse(Site == 96, 790, Distance_ft),
+         Distance_ft = ifelse(Site == 94, 1015, Distance_ft),
+         Distance_ft = ifelse(Site == 92, 1132, Distance_ft),
+         Distance_ft = ifelse(Site == 90, 1843, Distance_ft),
+         Distance_ft = ifelse(Site == 88, 3326, Distance_ft),
+         Distance_ft = ifelse(Site == 50, 5011, Distance_ft)
          ) |> 
-  select(Reservoir, Site, Date, Depth_m, Distance, everything())
+  select(Reservoir, Site, Date, Depth_m, Distance_ft, everything())
 
 
 ##facet plots
@@ -216,7 +216,7 @@ sensor_22may24 |>
 
 sensor_22may24 |> 
   pivot_longer(-c(1:5)) |> 
-  ggplot(aes(x = Distance, y = value, color = Depth_m))+
+  ggplot(aes(x = Distance_ft, y = value, color = Depth_m))+
   geom_point()+
   facet_wrap(~name, nrow = 3, scales = "free_y")+
   # labs(title = "HPB", y = "Temp (C)", x = "Site")+
@@ -224,7 +224,9 @@ sensor_22may24 |>
   scale_color_gradient("Depth_m",  high = "red", low = "blue") 
 
 ####try heatmap
-fp_new <- sensor_22may24
+fp_new <- sensor_22may24 |> 
+  mutate(Distance = Distance_ft*0.3048)
+  # filter(!Site ==50)
 
 #Temp
   interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$Temp_C,
@@ -237,7 +239,7 @@ ggplot(interp_temp, aes(x=x, y=y))+
     geom_raster(aes(fill=z))+
     scale_y_reverse(expand = c(0,0))+
     scale_x_continuous(expand = c(0, 0)) +
-    geom_point(data = sensor_22may24, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark cast sites 
+    geom_point(data = sensor_22may24, aes(x = (Distance_ft*0.3048), y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark cast sites 
     scale_fill_gradientn(colours = colorRamps::blue2green2red(60), na.value="gray")+
     labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "Temp CCR 22may24")+
     theme_bw()
@@ -254,10 +256,11 @@ ggplot(interp_spcond, aes(x=x, y=y))+
     geom_raster(aes(fill=z))+
     scale_y_reverse(expand = c(0,0))+
     scale_x_continuous(expand = c(0, 0)) +
-    geom_point(data = sensor_22may24, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark cast sites 
+    geom_point(data = sensor_22may24, aes(x = (Distance_ft*0.3048), y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark cast sites ; (sensor_22may24 |> filter(!Site ==50))
     scale_fill_gradientn(colours = colorRamps::blue2green2red(60), na.value="gray")+
     labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "Sp.Cond CCR 22may24")+
     theme_bw()
+
 
 ```
 
