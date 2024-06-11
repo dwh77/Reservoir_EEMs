@@ -77,6 +77,73 @@ waterlevel_correct |>
   geom_line()
 
 
+##precip plot 
+daily_rain <- ccr_met_git |> 
+  filter(DateTime > ymd("2024-04-01")) |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  group_by(Date) |> 
+  summarise(Daily_rain = sum(Rain_Total_mm, na.rm = T))
+
+ daily_rain|> 
+  ggplot(aes(x = Date, y = Daily_rain))+
+  geom_point()+
+  geom_line()
+  
+#get daily water level and precip
+waterlevel_daily <- waterlevel_correct |> 
+  mutate(Date = as.Date(DateTime_EST)) |> 
+  group_by(Date) |> 
+  summarise(Daily_waterlevel = mean(waterlevel_cm, na.rm = T))
+
+waterlevel_precip <-  left_join(daily_rain, waterlevel_daily, by = "Date")
+
+
+```
+
+Compare to USGS data 
+
+```{r}
+library(dataRetrieval)
+
+#get data from USGS
+sitenos <- c("02055100" , "02018500")
+
+#get site info
+siteinfo <- readNWISsite(sitenos)
+data_available <- whatNWISdata(siteNumber = sitenos, service = "dv")
+
+#get daily Q
+startDate <- "2024-04-01" # "1987-01-01"
+endDate <- Sys.Date()
+parameter <- "00060"
+
+Qdat <- readNWISdv(sitenos, parameter, startDate, endDate) %>% 
+  renameNWISColumns()
+
+Qdata <- left_join(Qdat, siteinfo, by = c("site_no"))
+
+
+
+#################### subset data to compare to HPB #####################################3
+
+Qdata |> 
+  filter(Date >= ymd("2024-04-15")) |> 
+  ggplot(aes(x = Date, y = Flow, color = site_no))+
+  geom_line()
+
+Qdata_forjoin <- Qdata |> 
+  select(Date, site_no, Flow) |> 
+  pivot_wider(names_from = site_no, values_from = Flow, names_prefix = "Flow_")
+
+
+left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
+  pivot_longer(-1) |> 
+  filter(Date > ymd("2024-04-15")) |> 
+  ggplot(aes(x = Date, y = value))+
+  geom_line()+
+  facet_wrap(~name, ncol = 1, scales = "free_y")
+
+
 ```
 
 
@@ -166,8 +233,8 @@ bring CTD to YSI
 
 ```{r}
 ##bind data togheter
-head(ctd_22may24)
-head(ccr_ysi)
+# head(ctd_22may24)
+# head(ccr_ysi)
 
 ctd_bind <- ctd_22may24 |> 
   select(Reservoir, Site, Date, Depth_m, Temp_C, DO_mgL, SpCond_uScm)
@@ -225,8 +292,8 @@ sensor_22may24 |>
 
 ####try heatmap
 fp_new <- sensor_22may24 |> 
-  mutate(Distance = Distance_ft*0.3048)
-  # filter(!Site ==50)
+  mutate(Distance = Distance_ft*0.3048) 
+   # filter(Distance > 407)
 
 #Temp
   interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$Temp_C,
@@ -248,19 +315,33 @@ ggplot(interp_temp, aes(x=x, y=y))+
 #Cond
   interp_spcond <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$SpCond_uScm,
                    xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10),
-                   yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.1),
+                   yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.5),
                    extrap = T, linear = T, duplicate = "strip")
   interp_spcond <- akima::interp2xyz(interp_spcond, data.frame=T)
+  
+  # max_depths <- fp_new |> 
+  #   group_by(Site, Distance) |> 
+  #   summarise(max_depth = max(Depth_m))
+  
+  # interp_spcond_v2 <- interp_spcond |> 
+  #   mutate(x_2 = ifelse(x < ))
   
 ggplot(interp_spcond, aes(x=x, y=y))+
     geom_raster(aes(fill=z))+
     scale_y_reverse(expand = c(0,0))+
     scale_x_continuous(expand = c(0, 0)) +
-    geom_point(data = sensor_22may24, aes(x = (Distance_ft*0.3048), y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark cast sites ; (sensor_22may24 |> filter(!Site ==50))
+    # geom_point(data = sensor_22may24, aes(x = (Distance_ft*0.3048), y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark cast sites ; (sensor_22may24 |> filter(!Site ==50))
     scale_fill_gradientn(colours = colorRamps::blue2green2red(60), na.value="gray")+
     labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "Sp.Cond CCR 22may24")+
     theme_bw()
 
+fp_new
+ggplot(fp_new, aes(x = Distance, y = Depth_m)) +
+  geom_contour_filled(aes(z = Temp_C), bins = 5) +
+  scale_fill_brewer(palette = "Spectral") +
+  labs(x = "distance", y = "Depth (m)", fill = "Temperature (°C)") +
+  theme_minimal() + 
+  scale_y_reverse()
 
 ```
 
