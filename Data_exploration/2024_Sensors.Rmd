@@ -1,7 +1,7 @@
 ---
-title: "EEMs exploration"
+title: "CCR spatial CTD and YSI measurements"
 author: "Dexter Howard"
-date: "2023-06-23"
+date: "2024-05-30"
 output: html_document
 ---
 
@@ -66,6 +66,11 @@ ccr_ctd_clean <- function(data){
 }
 
 
+```
+
+Clean up CTD data 
+
+```{r}
 ###clean up ctd 
 site50_22may24 <- ccr_ctd_clean(ctd_052224_site50) |> 
   mutate(Site = 50, Reservoir = "CCR") 
@@ -79,8 +84,8 @@ site90_22may24 <- ccr_ctd_clean(ctd_052224_site90) |>
 ctd_22may24 <- rbind(site50_22may24, site88_22may24, site90_22may24) |> 
   mutate(Date = as.Date(DateTime)) |> 
   select(Reservoir, Site, Date, everything())
-
 ```
+
 
 CTD plots 
 
@@ -143,7 +148,8 @@ sensor_22may24 |>
   pivot_longer(-c(1:5)) |> 
   ggplot(aes(x = factor(Site, level = levels_sites), y = value, color = Depth_m))+
   geom_point()+
-  facet_wrap(~name, nrow = 3, scales = "free_y")+
+  #facet_wrap(~name, nrow = 3, scales = "free_y")+
+  facet_grid(name~Date, scales = "free_y")+
   # labs(title = "HPB", y = "Temp (C)", x = "Site")+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
   scale_color_gradient("Depth_m",  high = "red", low = "blue") 

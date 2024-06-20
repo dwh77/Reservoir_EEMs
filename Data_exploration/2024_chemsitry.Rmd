@@ -1,0 +1,103 @@
+---
+title: "CCR Spatial chemistry"
+author: "Dexter Howard"
+date: "2024-06-20"
+output: html_document
+---
+
+## Read in packages 
+
+```{r, include = F}
+library(tidyverse)
+# library(scales) #for date format on plots
+# library(patchwork) #arrange figures w/ slashes and lines
+# library(plotly)
+
+
+```
+
+
+## Read in EEMs
+
+Get EEM data 
+
+```{r}
+## YSI data
+eems24 <- read.csv("../EEMs_Results_2024.csv")
+
+eems_plotting <- eems24 |> 
+  mutate(Distance_ft = ifelse(Site == 101, 0, NA),
+         Distance_ft = ifelse(Site == 100, 407, Distance_ft),
+         Distance_ft = ifelse(Site == 98, 619, Distance_ft),
+         Distance_ft = ifelse(Site == 96, 790, Distance_ft),
+         Distance_ft = ifelse(Site == 94, 1015, Distance_ft),
+         Distance_ft = ifelse(Site == 92, 1132, Distance_ft),
+         Distance_ft = ifelse(Site == 90, 1843, Distance_ft),
+         Distance_ft = ifelse(Site == 88, 3326, Distance_ft),
+         Distance_ft = ifelse(Site == 50, 5011, Distance_ft),
+         Distance = Distance_ft*0.3048) |> 
+  select(Reservoir, Site, Depth_m, Date, Distance, FI., HIX., BIX.)
+
+eems_plotting
+
+```
+
+
+
+
+## EEMs plots 
+
+eems plots
+
+```{r}
+##previous style plot
+levels_sites <- c(101, 100, 98, 96, 94, 92, 90, 88, 50)
+
+eems_plotting |> 
+  pivot_longer(-c(1:5)) |> 
+  ggplot(aes(x = factor(Site, level = levels_sites), y = value, color = Depth_m))+
+  geom_point()+
+  facet_wrap(~name, nrow = 3, scales = "free_y")+
+  # labs(title = "HPB", y = "Temp (C)", x = "Site")+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
+  scale_color_gradient("Depth_m",  high = "red", low = "blue") 
+  
+
+eems_plotting |> 
+  pivot_longer(-c(1:5)) |> 
+  ggplot(aes(x = Distance, y = value, color = Depth_m))+
+  geom_point()+
+  facet_wrap(~name, nrow = 3, scales = "free_y")+
+  # labs(title = "HPB", y = "Temp (C)", x = "Site")+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
+  scale_color_gradient("Depth_m",  high = "red", low = "blue") 
+
+####try heatmap
+fp_new <- eems_plotting 
+
+#Temp
+  interp_hix <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$HIX.,
+                   xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 50),
+                   yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.5),
+                   extrap = T, linear = T, duplicate = "strip")
+  interp_hix <- akima::interp2xyz(interp_hix, data.frame=T)
+
+ggplot(interp_hix, aes(x=x, y=y))+
+    geom_raster(aes(fill=z))+
+    scale_y_reverse(expand = c(0,0))+
+    scale_x_continuous(expand = c(0, 0)) +
+    geom_point(data = eems_plotting, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark sample sites 
+    scale_fill_gradientn(colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "HIX CCR 22may24")+
+    theme_bw()
+  
+  
+
+```
+
+
+
+
+
+
+
