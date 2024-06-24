@@ -25,36 +25,31 @@ Get YSI data
 ## YSI data
 ysi_gsheet <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1HbSBEFjMuK4Lxit5MRbATeiyljVAB-cpUNxO3dKd8V8/edit#gid=1787819257")
 
-ccr_ysi <- ysi_gsheet |> 
-  filter(Reservoir == "CCR") |> 
-  mutate(Date = as.Date(DateTime)) |> 
+# ysi_L1 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/YSI_PAR/ysi_L1.csv")
+
+ccr_ysi <- ysi_gsheet |>
+  filter(Reservoir == "CCR") |>
+  mutate(Date = as.Date(DateTime)) |>
   filter(year(Date) > 2023)
 
 ```
 
-Get CTD Data
+
+CTD cleaning function 
 
 ```{r}
-### read in raw data 
-ctd_052224_site50 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/Raw_CTD/csv_outputs/052224_ccr50_S7809003.csv")
-
-ctd_052224_site88 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/Raw_CTD/csv_outputs/052224_ccr88_S7809004.csv")
-
-ctd_052224_site90 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/Raw_CTD/csv_outputs/052224_ccr90_S7809005.csv")
-
-###format data
-#function to clean ctd casts
+###function to clean ctd casts
 ccr_ctd_clean <- function(data){
 
   #slice by depth for each reservoir
-    depths = seq(0.1, 23, by = 0.3)
+    depths = seq(0.1, 23, by = 1)
     df.final<-data.frame()
 
  for (i in 1:length(depths)){
       
       fp_layer <- data %>% 
         mutate(Date = as.Date(DateTime)) |> 
-        group_by(Date) |>  
+        group_by(Date, Site) |>  
         slice(which.min(abs(as.numeric(Depth_m) - depths[i])))
       
       # Bind each of the data layers together.
@@ -65,36 +60,38 @@ ccr_ctd_clean <- function(data){
     return(df.final)
 }
 
-
 ```
 
-Clean up CTD data 
+
+Get CTD Data
 
 ```{r}
-###clean up ctd 
-site50_22may24 <- ccr_ctd_clean(ctd_052224_site50) |> 
-  mutate(Site = 50, Reservoir = "CCR") 
+### read in raw data 
+ctd_L1 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/Raw_CTD/ctd_L1.csv")
 
-site88_22may24 <- ccr_ctd_clean(ctd_052224_site88) |> 
-  mutate(Site = 88, Reservoir = "CCR") 
-
-site90_22may24 <- ccr_ctd_clean(ctd_052224_site90) |> 
-  mutate(Site = 90, Reservoir = "CCR") 
-
-ctd_22may24 <- rbind(site50_22may24, site88_22may24, site90_22may24) |> 
+ccr_ctd_24 <- ctd_L1 |> 
   mutate(Date = as.Date(DateTime)) |> 
-  select(Reservoir, Site, Date, everything())
+  select(Reservoir, Site, Date, everything()) |> 
+  filter(Reservoir == "CCR")
+
+ccr_ctd_24 <- ccr_ctd_clean(ccr_ctd_24)
+
+
 ```
 
 
-CTD plots 
+CTD check plots 
 
 ```{r}
-ctd_22may24 |> 
-  pivot_longer(-c(1:5)) |> 
-  filter(name %in% c("Temp_C", "SpCond_uScm", "DO_mgL")) |> 
+#plot 4 focal variables and remove known bad points
+
+ccr_ctd_24 |> 
+    filter(Chla_ugL < 13) |> #remove crazy high chla at site 90 (likely sensor in mud)
+  mutate(SpCond_uScm = ifelse(Date == ymd("2024-06-19") & SpCond_uScm < 110, NA, SpCond_uScm )) |> #remove Cond bubble issues that should get worked out at some point
+  pivot_longer(-c(1:6)) |> 
+  filter(name %in% c("Temp_C", "SpCond_uScm", "DO_mgL", "Chla_ugL", "CDOM_ugL")) |> 
   # filter(Site == 50) |> 
-  ggplot(aes(x = value, y = Depth_m))+
+  ggplot(aes(x = value, y = Depth_m, color = as.factor(Date)))+
   geom_line(orientation = "y")+
   scale_y_reverse()+
   facet_grid(Site~name, scales = "free")+
@@ -102,21 +99,21 @@ ctd_22may24 |>
 
 ```
 
-bring CTD to YSI
+## Bring CTD to YSI
 
 ```{r}
 ##bind data togheter
 # head(ctd_22may24)
 # head(ccr_ysi)
 
-ctd_bind <- ctd_22may24 |> 
-  select(Reservoir, Site, Date, Depth_m, Temp_C, DO_mgL, SpCond_uScm)
+ctd_bind <- ccr_ctd_24 |> 
+  select(Reservoir, Site, Date, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm)
 
 ysi_bind <- ccr_ysi |> 
-  select(Reservoir, Site, Date, Depth_m, Temp_C, DO_mgL, SpCond_uScm) |> 
+  select(Reservoir, Site, Date, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm) |> 
   filter(!Site %in% c(88,90))
 
-sensor_22may24 <- rbind(ctd_bind, ysi_bind) |> 
+sensors <- rbind(ctd_bind, ysi_bind) |> 
   mutate(Distance_ft = ifelse(Site == 101, 0, NA),
          Distance_ft = ifelse(Site == 100, 407, Distance_ft),
          Distance_ft = ifelse(Site == 98, 619, Distance_ft),
@@ -127,47 +124,60 @@ sensor_22may24 <- rbind(ctd_bind, ysi_bind) |>
          Distance_ft = ifelse(Site == 88, 3326, Distance_ft),
          Distance_ft = ifelse(Site == 50, 5011, Distance_ft)
          ) |> 
-  select(Reservoir, Site, Date, Depth_m, Distance_ft, everything())
+  mutate(Site_code = ifelse(Site == 101, "S1", NA),
+         Site_code = ifelse(Site == 100, "S2", Site_code),
+         Site_code = ifelse(Site == 98, "P1", Site_code),
+         Site_code = ifelse(Site == 96, "P2", Site_code),
+         Site_code = ifelse(Site == 94, "C1", Site_code),
+         Site_code = ifelse(Site == 92, "C2", Site_code),
+         Site_code = ifelse(Site == 90, "C3", Site_code),
+         Site_code = ifelse(Site == 88, "C4", Site_code),
+         Site_code = ifelse(Site == 50, "50", Site_code)
+         ) |> 
+  select(Reservoir, Site, Site_code, Date, Depth_m, Distance_ft, everything())
 
 
-##facet plots
-sensor_22may24 |> 
-  pivot_longer(-c(1:5)) |> 
-  # filter(name %in% c("Temp_C")) |> 
-  ggplot(aes(x = value, y = Depth_m))+
-  geom_point()+
-  # geom_line(orientation = "y")+
-  scale_y_reverse()+
-  facet_grid(Site~name, scales = "free")
+```
 
+
+## Dot plots - old style
+
+```{r}
 
 ##previous style plot
 levels_sites <- c(101, 100, 98, 96, 94, 92, 90, 88, 50)
+levels_sites_code <- c("S1", "S2", "P1", "P2", "C1", "C2", "C3", "C4", "50")
 
-sensor_22may24 |> 
-  pivot_longer(-c(1:5)) |> 
-  ggplot(aes(x = factor(Site, level = levels_sites), y = value, color = Depth_m))+
-  geom_point()+
+sensors |> 
+  select(-DO_mgL) |> 
+  pivot_longer(-c(1:6)) |> 
+  mutate(Depth_m = ifelse(Depth_m == 1.1, 1, Depth_m),
+         Depth_m = ifelse(Depth_m == 0.4, 0.5, Depth_m)) |> #just to make color gradient a lil cleaner
+  #filter(Site > 50) |> #trim site 50 to help w/ viz
+  #ggplot(aes(x = factor(Site, level = levels_sites), y = value, color = as.factor(Depth_m)))+
+  ggplot(aes(x = factor(Site_code, levels = levels_sites_code), y = value, color = as.factor(Depth_m)))+
+  geom_point(size = 3)+
   #facet_wrap(~name, nrow = 3, scales = "free_y")+
   facet_grid(name~Date, scales = "free_y")+
   # labs(title = "HPB", y = "Temp (C)", x = "Site")+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
-  scale_color_gradient("Depth_m",  high = "red", low = "blue") 
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
+  guides(color = guide_legend(nrow=2, byrow=TRUE))
+  #scale_color_gradient("Depth_m",  high = "red", low = "blue") 
   
 
-sensor_22may24 |> 
-  pivot_longer(-c(1:5)) |> 
-  ggplot(aes(x = Distance_ft, y = value, color = Depth_m))+
-  geom_point()+
-  facet_wrap(~name, nrow = 3, scales = "free_y")+
-  # labs(title = "HPB", y = "Temp (C)", x = "Site")+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
-  scale_color_gradient("Depth_m",  high = "red", low = "blue") 
 
-####try heatmap
-fp_new <- sensor_22may24 |> 
-  mutate(Distance = Distance_ft*0.3048) 
-   # filter(Distance > 407)
+```
+
+
+
+## Heatmaps 
+
+```{r}
+
+fp_new <- sensors |> 
+  filter(Date == ymd("2024-05-22")) |> 
+  mutate(Distance = Distance_ft*0.3048) |> 
+   filter(Site < 100)
 
 #Temp
   interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$Temp_C,
@@ -180,46 +190,45 @@ ggplot(interp_temp, aes(x=x, y=y))+
     geom_raster(aes(fill=z))+
     scale_y_reverse(expand = c(0,0))+
     scale_x_continuous(expand = c(0, 0)) +
-    geom_point(data = sensor_22may24, aes(x = (Distance_ft*0.3048), y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark cast sites 
+    geom_point(data = fp_new, aes(x = (Distance_ft*0.3048), y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark cast sites 
     scale_fill_gradientn(colours = colorRamps::blue2green2red(60), na.value="gray")+
     labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "Temp CCR 22may24")+
     theme_bw()
   
   
 #Cond
-  interp_spcond <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$SpCond_uScm,
-                   xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10),
-                   yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.5),
-                   extrap = T, linear = T, duplicate = "strip")
-  interp_spcond <- akima::interp2xyz(interp_spcond, data.frame=T)
-  
-  # max_depths <- fp_new |> 
-  #   group_by(Site, Distance) |> 
-  #   summarise(max_depth = max(Depth_m))
-  
-  # interp_spcond_v2 <- interp_spcond |> 
-  #   mutate(x_2 = ifelse(x < ))
-  
-ggplot(interp_spcond, aes(x=x, y=y))+
-    geom_raster(aes(fill=z))+
-    scale_y_reverse(expand = c(0,0))+
-    scale_x_continuous(expand = c(0, 0)) +
-    # geom_point(data = sensor_22may24, aes(x = (Distance_ft*0.3048), y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark cast sites ; (sensor_22may24 |> filter(!Site ==50))
-    scale_fill_gradientn(colours = colorRamps::blue2green2red(60), na.value="gray")+
-    labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "Sp.Cond CCR 22may24")+
-    theme_bw()
+#   interp_spcond <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$SpCond_uScm,
+#                    xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10),
+#                    yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.5),
+#                    extrap = T, linear = T, duplicate = "strip")
+#   interp_spcond <- akima::interp2xyz(interp_spcond, data.frame=T)
+#   
+#   # max_depths <- fp_new |> 
+#   #   group_by(Site, Distance) |> 
+#   #   summarise(max_depth = max(Depth_m))
+#   
+#   # interp_spcond_v2 <- interp_spcond |> 
+#   #   mutate(x_2 = ifelse(x < ))
+#   
+# ggplot(interp_spcond, aes(x=x, y=y))+
+#     geom_raster(aes(fill=z))+
+#     scale_y_reverse(expand = c(0,0))+
+#     scale_x_continuous(expand = c(0, 0)) +
+#     # geom_point(data = sensor_22may24, aes(x = (Distance_ft*0.3048), y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark cast sites ; (sensor_22may24 |> filter(!Site ==50))
+#     scale_fill_gradientn(colours = colorRamps::blue2green2red(60), na.value="gray")+
+#     labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "Sp.Cond CCR 22may24")+
+#     theme_bw()
+# 
+# fp_new
+# ggplot(fp_new, aes(x = Distance, y = Depth_m)) +
+#   geom_contour_filled(aes(z = Temp_C), bins = 5) +
+#   scale_fill_brewer(palette = "Spectral") +
+#   labs(x = "distance", y = "Depth (m)", fill = "Temperature (°C)") +
+#   theme_minimal() + 
+#   scale_y_reverse()
 
-fp_new
-ggplot(fp_new, aes(x = Distance, y = Depth_m)) +
-  geom_contour_filled(aes(z = Temp_C), bins = 5) +
-  scale_fill_brewer(palette = "Spectral") +
-  labs(x = "distance", y = "Depth (m)", fill = "Temperature (°C)") +
-  theme_minimal() + 
-  scale_y_reverse()
 
 ```
-
-
 
 
 
