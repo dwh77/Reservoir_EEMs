@@ -36,7 +36,17 @@ eems_plotting <- eems24 |>
          Distance_ft = ifelse(Site == 88, 3326, Distance_ft),
          Distance_ft = ifelse(Site == 50, 5011, Distance_ft),
          Distance = Distance_ft*0.3048) |> 
-  select(Reservoir, Site, Depth_m, Date, Distance, FI., HIX., BIX., T., A., A.T., a254, a350, A254, A350 )
+    mutate(Site_code = ifelse(Site == 101, "S1", NA),
+         Site_code = ifelse(Site == 100, "S2", Site_code),
+         Site_code = ifelse(Site == 98, "P1", Site_code),
+         Site_code = ifelse(Site == 96, "P2", Site_code),
+         Site_code = ifelse(Site == 94, "C1", Site_code),
+         Site_code = ifelse(Site == 92, "C2", Site_code),
+         Site_code = ifelse(Site == 90, "C3", Site_code),
+         Site_code = ifelse(Site == 88, "C4", Site_code),
+         Site_code = ifelse(Site == 50, "50", Site_code)
+         ) |> 
+  select(Reservoir, Site, Site_code, Depth_m, Date, Distance, FI., HIX., BIX., T., A., A.T., a254, a350, A254, A350 )
 
 eems_plotting
 
@@ -52,6 +62,8 @@ eems plots
 ```{r}
 ##previous style plot
 levels_sites <- c(101, 100, 98, 96, 94, 92, 90, 88, 50)
+levels_sites_code <- c("S1", "S2", "P1", "P2", "C1", "C2", "C3", "C4", "50")
+
 
 # set up colors for factored depths 
 depths <- c(0.1, 0.5, 1, 1.5, 2, 6)
@@ -59,10 +71,11 @@ colors <- scales::seq_gradient_pal(low = "blue", high = "#ff0000", space = "Lab"
 color_values <- setNames(colors, depths)
 
 eems_plotting |> 
-  select(Reservoir, Site, Depth_m, Date, Distance, FI., HIX., BIX.) |> 
-  pivot_longer(-c(1:5)) |> 
-  ggplot(aes(x = factor(Site, level = levels_sites), y = value, color = factor(Depth_m)))+
-  geom_jitter(size = 2, width = 0.1)+
+  select(Reservoir, Site, Site_code, Depth_m, Date, Distance, FI., HIX., BIX.) |> 
+  pivot_longer(-c(1:6)) |> 
+  # ggplot(aes(x = factor(Site, level = levels_sites), y = value, color = factor(Depth_m)))+
+  ggplot(aes(x = factor(Site_code, level = levels_sites_code), y = value, color = factor(Depth_m)))+
+  geom_jitter(size = 2.5, width = 0.1)+
   facet_wrap(~name, nrow = 3, scales = "free_y")+
   # labs(title = "HPB", y = "Temp (C)", x = "Site")+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
