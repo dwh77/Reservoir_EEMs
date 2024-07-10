@@ -4,10 +4,10 @@
 library(tidyverse)
 # library(nlmrt) #for slope ratio calcs
 
-run_20240614 <- read.csv("./Processed_Data/20240614_DH/20240614_CDOMall.csv")
+run_20240708 <- read.csv("./Processed_Data/20240708_DH/20240708_CDOMall.csv")
 
 #works to get a254 and a350
-z <- run_20240614 |> 
+z <- run_20240708 |> 
   rename(wavelength = 1) |> 
   filter(wavelength %in% c(254, 350)) |> 
   pivot_longer(-(1:2), names_to = "Sample", values_to = "Abs_raw") |> 
@@ -20,13 +20,23 @@ z <- run_20240614 |>
          name_new = ifelse(name == "naparian_abs" & wavelength == 350, "a350", name_new)) |> 
   select(Sample, name_new, value) |> 
   pivot_wider(names_from = name_new, values_from = value) |> 
-  mutate(Sample = paste0("20240614_", Sample, ".csv", sep = ""))
+  mutate("Sample.Name" = paste0("20240708_", Sample, ".csv", sep = "")) |> 
+  select(-Sample)
 
 
 #### REad in EEMs results and bind
 eems <- read.csv("./EEMs_Results_2024.csv")
 
-zz <- left_join(eems, z, by = c("Sample.Name" = "Sample"))
+zz <- left_join(eems, z, by = c("Sample.Name")) |> 
+  rename(a254 = "a254.x",
+         A254 = "A254.x",
+         a350 = "a350.x", 
+         A350 = "A350.x") |> 
+  mutate(a254 = ifelse(is.na(a254), a254.y, a254),
+         A254 = ifelse(is.na(A254), A254.y, A254),
+         a350 = ifelse(is.na(a350), a350.y, a350),
+         A350 = ifelse(is.na(A350), A350.y, A350)) |> 
+  select(-a254.y, -A254.y, -a350.y, -A350.y)
 
 write.csv(zz, "./EEMs_Results_2024.csv", row.names = F)
 
