@@ -70,6 +70,7 @@ depths <- c(0.1, 0.5, 1, 1.5, 2, 6)
 colors <- scales::seq_gradient_pal(low = "blue", high = "#ff0000", space = "Lab")(1:6/6)
 color_values <- setNames(colors, depths)
 
+## HIX and BIX by date w/ depth as specific color 
 eems_plotting |> 
   select(Reservoir, Site, Site_code, Depth_m, Date, Distance, FI., HIX., BIX.) |> 
   pivot_longer(-c(1:6)) |> 
@@ -83,18 +84,53 @@ eems_plotting |>
   # scale_color_manual(values = color_values)
   # scale_color_gradient("Depth_m",  high = "red", low = "blue") 
   
+### HIX and BIX by date with Depth as specific color as gradient 
+eems_plotting |>
+  select(1:6, HIX., BIX.) |> 
+  pivot_longer(-c(1:6)) |>
+  # ggplot(aes(x = Distance, y = value, color = Depth_m))+
+  ggplot(aes(x = factor(Site_code, levels = levels_sites_code), y = value, color = Depth_m))+
+  geom_point()+
+  #facet_wrap(~Date, nrow = 3, scales = "free_y")+
+  facet_grid(name~Date, scales = "free_y")+
+  labs(x = element_blank())+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
+  scale_color_gradient("Depth_m",  high = "red", low = "blue")
 
-# eems_plotting |> 
-#   pivot_longer(-c(1:5)) |> 
-#   ggplot(aes(x = Distance, y = value, color = Depth_m))+
-#   geom_point()+
-#   facet_wrap(~name, nrow = 3, scales = "free_y")+
-#   # labs(title = "HPB", y = "Temp (C)", x = "Site")+
-#   theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
-#   scale_color_gradient("Depth_m",  high = "red", low = "blue") 
+## hIX by date with depth on Y
+eems_plotting |>
+  select(1:6, HIX.) |> 
+  pivot_longer(-c(1:6)) |>
+  ggplot(aes(x = factor(Site_code, levels = levels_sites_code), y = Depth_m, color = value))+
+  geom_point()+
+  scale_y_reverse()+
+  facet_grid(name~Date, scales = "free_y")+ 
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
+  # viridis::scale_color_viridis()
+  scale_color_gradient(high = "black", low = "#CFCFCF") # has also done red to blue w/ some luck
+  # scale_color_gradientn(colors = magma(256))
+
+## BIX by date with depth on Y
+eems_plotting |>
+  select(1:6, BIX.) |> 
+  pivot_longer(-c(1:6)) |>
+  ggplot(aes(x = factor(Site_code, levels = levels_sites_code), y = Depth_m, color = value))+
+  geom_point()+
+  scale_y_reverse()+
+  facet_grid(name~Date, scales = "free_y")+ 
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
+  scale_color_gradient(high = "black", low = "#CFCFCF") # has also done red to blue w/ some luck
+
+  
+
+```
 
 
 
+
+## Heatmap trial 
+
+```{r}
 ###################################### try heatmap
 fp_new <- eems_plotting 
 
@@ -113,12 +149,7 @@ ggplot(interp_hix, aes(x=x, y=y))+
     scale_fill_gradientn(colours = colorRamps::blue2green2red(60), na.value="gray")+
     labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "HIX CCR 22may24")+
     theme_bw()
-  
-  
-
 ```
-
-
 
 
 

@@ -23,11 +23,11 @@ Get YSI data
 
 ```{r}
 ## YSI data
-ysi_gsheet <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1HbSBEFjMuK4Lxit5MRbATeiyljVAB-cpUNxO3dKd8V8/edit#gid=1787819257")
+# ysi_gsheet <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1HbSBEFjMuK4Lxit5MRbATeiyljVAB-cpUNxO3dKd8V8/edit#gid=1787819257")
 
-# ysi_L1 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/YSI_PAR/ysi_L1.csv")
+ysi_L1 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/YSI_PAR/ysi_L1.csv")
 
-ccr_ysi <- ysi_gsheet |>
+ccr_ysi <- ysi_L1 |>
   filter(Reservoir == "CCR") |>
   mutate(Date = as.Date(DateTime)) |>
   filter(year(Date) > 2023)
@@ -86,7 +86,7 @@ CTD check plots
 #plot 4 focal variables and remove known bad points
 
 ccr_ctd_24 |> 
-    filter(Chla_ugL < 13) |> #remove crazy high chla at site 90 (likely sensor in mud)
+  filter(Chla_ugL < 50) |> #remove crazy high chla at site 90 (likely sensor in mud)
   mutate(SpCond_uScm = ifelse(Date == ymd("2024-06-19") & SpCond_uScm < 110, NA, SpCond_uScm )) |> #remove Cond bubble issues that should get worked out at some point
   pivot_longer(-c(1:6)) |> 
   filter(name %in% c("Temp_C", "SpCond_uScm", "DO_mgL", "Chla_ugL", "CDOM_ugL")) |> 
@@ -229,6 +229,75 @@ ggplot(interp_temp, aes(x=x, y=y))+
 
 
 ```
+
+
+## Cove HOBO buoys 
+
+get data together from April - July 11
+```{r}
+hobo_P1_top <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/hobo101_P1_top_11jul24.csv", skip = 1) |> 
+  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "P1", Depth = "TOP")
+
+hobo_P1_mid <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/hobo51_P1_mid_11jul24.csv", skip = 1) |> 
+    select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "P1", Depth = "MID")
+
+
+hobo_P1_bot <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/hobo36_P1_bot_11jul24.csv", skip = 1) |> 
+    select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "P1", Depth = "BOT")
+
+
+hobos_P1 <- rbind(hobo_P1_top, hobo_P1_mid, hobo_P1_bot) |> 
+  mutate(DateTime = mdy_hms(DateTime))
+
+
+```
+
+plot data
+```{r}
+#plot raw data
+hobos_P1 |> 
+  ggplot(aes(x = DateTime, y = Temp_C, color = Depth))+
+  geom_line()+
+  geom_vline(xintercept = ymd_hms("2024-05-22 00:00:00"))+
+  geom_vline(xintercept = ymd_hms("2024-06-19 00:00:00"))+
+  geom_vline(xintercept = ymd_hms("2024-07-11 00:00:00"))+
+  # facet_wrap(~Depth)+
+  theme_classic()
+
+hobos_P1 |> 
+  filter(DateTime >= ymd("2024-06-01")) |> 
+  ggplot(aes(x = DateTime, y = Temp_C, color = Depth))+
+  geom_line()+
+  geom_vline(xintercept = ymd_hms("2024-05-22 00:00:00"))+
+  geom_vline(xintercept = ymd_hms("2024-06-19 00:00:00"))+
+  geom_vline(xintercept = ymd_hms("2024-07-11 00:00:00"))+
+  # facet_wrap(~Depth)+
+  theme_classic()
+
+#plot daily data
+hobos_P1 |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  group_by(Date, Depth) |> 
+  summarize(Temp_C = mean(Temp_C, na.rm = T)) |> 
+  ggplot(aes(x = Date, y = Temp_C, color = Depth))+
+  geom_line()+
+  geom_vline(xintercept = ymd_hms("2024-05-22 00:00:00"))+
+  geom_vline(xintercept = ymd_hms("2024-06-19 00:00:00"))+
+  geom_vline(xintercept = ymd_hms("2024-07-11 00:00:00"))+
+  # facet_wrap(~Depth)+
+  theme_classic()
+
+
+```
+
+
+
+
+
+
+
+
+
 
 
 

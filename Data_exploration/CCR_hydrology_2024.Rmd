@@ -54,20 +54,27 @@ ccr_met_bind <- ccr_met_git |>
 ### HOBO water level
 # hobo_22may24 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/HPB_waterlevel/hobo_hpb_22may24.csv", skip = 1)
 
-hobo_19jun24 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/HPB_waterlevel/hobo_hpb_19jun24.csv", skip = 1)
+hobo_11jul24 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/HPB_waterlevel/hobo_hpb_11jul24.csv", skip = 1)
 
-hobo_bind <- hobo_19jun24 |> 
+#set time where sensor may have been out of the water
+maintenance <- c(seq(ymd_hms("2024-05-22 15:00:00"), ymd_hms("2024-05-22 16:00:00"), by = "10 min"),
+                 seq(ymd_hms("2024-06-19 11:00:00"), ymd_hms("2024-06-19 12:20:00"), by = "10 min"),
+                 seq(ymd_hms("2024-07-11 11:00:00"), ymd_hms("2024-07-11 12:00:00"), by = "10 min")
+                 )
+
+hobo_bind <- hobo_11jul24 |> 
   rename(DateTime_EDT = 2, 
          HOBO_Abs_Pres_kPa = 3,
          Temp_C = 4) |> 
   select(DateTime_EDT, HOBO_Abs_Pres_kPa, Temp_C) |> 
   mutate(DateTime_EDT = mdy_hms(DateTime_EDT)) |> 
+  filter(!DateTime_EDT %in% maintenance) |> 
   mutate(Date = as.Date(DateTime_EDT),
          Hour = hour(DateTime_EDT),
          Min = minute(DateTime_EDT)) |> 
   mutate(Time_EST = paste(Hour+1, Min, 00, sep = ":"),
          DateTime_EST = ymd_hms(paste(Date, Time_EST, sep = " "))  ) |> 
-  select(DateTime_EST, HOBO_Abs_Pres_kPa, Temp_C)
+  select(DateTime_EST, HOBO_Abs_Pres_kPa, Temp_C) 
 
 
 ############## bind data and calculate water level #######################
@@ -78,7 +85,7 @@ waterlevel_correct <- left_join(hobo_bind, ccr_met_bind, by = "DateTime_EST") |>
   mutate(waterlevel_cm = corrected_Pres_kPa * 10.1972)
 
 
-############### plot data ######################3
+############### plot data ######################
 
 waterlevel_correct |> 
   ggplot()+
@@ -151,13 +158,21 @@ Qdata_forjoin <- Qdata |>
 
 
 left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
+  rename(CCR_MetStation_daily_rain_mm = Daily_rain,
+         CCR_HPB_daily_waterlevel_cm = Daily_waterlevel,
+         USGS_CatwabaCreek_dailyflow_cfs = Flow_02018500,
+         USGS_TinkerCreek_dailyflow_cfs = Flow_02055100) |> 
   pivot_longer(-1) |> 
   filter(Date > ymd("2024-04-15")) |> 
   ggplot(aes(x = Date, y = value))+
   geom_point()+
   geom_vline(xintercept = ymd("2024-05-22"))+
   geom_vline(xintercept = ymd("2024-06-19"))+
-  facet_wrap(~name, ncol = 1, scales = "free_y")
+  geom_vline(xintercept = ymd("2024-07-11"))+
+  facet_wrap(~name, ncol = 1, scales = "free_y")+
+  labs(x= element_blank())+
+  theme_bw()+ theme(text = element_text(size = 18))
+
 
 
 ```
