@@ -5,6 +5,12 @@ date: "2024-06-20"
 output: html_document
 ---
 
+## packages 
+```{r}
+library(tidyverse)
+library(ggpmisc) #stat poly line
+```
+
 
 ## Get flowmate Q
 
@@ -135,6 +141,7 @@ data_available <- whatNWISdata(siteNumber = sitenos, service = "dv")
 
 #get daily Q
 startDate <- "2024-04-01" # "1987-01-01"
+#startDate <- "2020-01-01"
 endDate <- Sys.Date()
 parameter <- "00060"
 
@@ -143,7 +150,13 @@ Qdat <- readNWISdv(sitenos, parameter, startDate, endDate) %>%
 
 Qdata <- left_join(Qdat, siteinfo, by = c("site_no"))
 
-
+## check out long term patterns in USGS sites
+# Qdata |> 
+#   ggplot(aes(x = Date, y = Flow, color = station_nm))+
+#   geom_point()+
+#   scale_y_log10()+
+#   theme_bw()+
+#   theme(legend.position = "top")
 
 #################### subset data to compare to HPB #####################################3
 
@@ -156,7 +169,7 @@ Qdata_forjoin <- Qdata |>
   select(Date, site_no, Flow) |> 
   pivot_wider(names_from = site_no, values_from = Flow, names_prefix = "Flow_")
 
-
+# 4 variable plot
 left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
   rename(CCR_MetStation_daily_rain_mm = Daily_rain,
          CCR_HPB_daily_waterlevel_cm = Daily_waterlevel,
@@ -172,6 +185,21 @@ left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |>
   facet_wrap(~name, ncol = 1, scales = "free_y")+
   labs(x= element_blank())+
   theme_bw()+ theme(text = element_text(size = 18))
+
+
+#USGS to HPB regression
+left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
+  rename(CCR_HPB_daily_waterlevel_cm = Daily_waterlevel,
+         USGS_CatwabaCreek_dailyflow_cfs = Flow_02018500,
+         USGS_TinkerCreek_dailyflow_cfs = Flow_02055100) |> 
+  filter(!is.na(CCR_HPB_daily_waterlevel_cm)) |> 
+  ggplot(aes(x = USGS_CatwabaCreek_dailyflow_cfs, y = CCR_HPB_daily_waterlevel_cm))+
+  geom_point()+
+  stat_poly_line(method = "lm", linewidth = 2)+
+  stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
+               aes(x = USGS_CatwabaCreek_dailyflow_cfs, y = CCR_HPB_daily_waterlevel_cm, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
+  theme_bw()
+  
 
 
 
