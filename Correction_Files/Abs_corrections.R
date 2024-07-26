@@ -4,10 +4,10 @@
 library(tidyverse)
 # library(nlmrt) #for slope ratio calcs
 
-run_20240708 <- read.csv("./Processed_Data/20240708_DH/20240708_CDOMall.csv")
+run_20240725 <- read.csv("./Processed_Data/20240725_DH/CDOM_all_20240725.csv")
 
 #works to get a254 and a350
-z <- run_20240708 |> 
+z <- run_20240725 |> 
   rename(wavelength = 1) |> 
   filter(wavelength %in% c(254, 350)) |> 
   pivot_longer(-(1:2), names_to = "Sample", values_to = "Abs_raw") |> 
@@ -20,7 +20,7 @@ z <- run_20240708 |>
          name_new = ifelse(name == "naparian_abs" & wavelength == 350, "a350", name_new)) |> 
   select(Sample, name_new, value) |> 
   pivot_wider(names_from = name_new, values_from = value) |> 
-  mutate("Sample.Name" = paste0("20240708_", Sample, ".csv", sep = "")) |> 
+  mutate("Sample.Name" = paste0("20240725_", Sample, ".csv", sep = "")) |> 
   select(-Sample)
 
 
