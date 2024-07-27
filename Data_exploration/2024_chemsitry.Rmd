@@ -22,21 +22,30 @@ library(tidyverse)
 Get EEM data 
 
 ```{r}
-## YSI data
+## bring in distances table from google sheets; have to redownload locally each time 
+distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances.csv") |> 
+  mutate(Date = mdy(Date)) |> 
+  select(-Notes) |> 
+  pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft")
+
+
+
+## EEM data
 eems24 <- read.csv("../EEMs_Results_2024.csv")
 
-eems_plotting <- eems24 |> 
-  mutate(Distance_ft = ifelse(Site == 101, 0, NA),
-         Distance_ft = ifelse(Site == 100, 407, Distance_ft),
-         Distance_ft = ifelse(Site == 98, 619, Distance_ft),
-         Distance_ft = ifelse(Site == 96, 790, Distance_ft),
-         Distance_ft = ifelse(Site == 94, 1015, Distance_ft),
-         Distance_ft = ifelse(Site == 92, 1132, Distance_ft),
-         Distance_ft = ifelse(Site == 90, 1843, Distance_ft),
-         Distance_ft = ifelse(Site == 88, 3326, Distance_ft),
-         Distance_ft = ifelse(Site == 50, 5011, Distance_ft),
-         Distance = Distance_ft*0.3048) |> 
-    mutate(Site_code = ifelse(Site == 101, "S1", NA),
+eems <- eems24 |> 
+  # mutate(Distance_ft = ifelse(Site == 101, 0, NA),
+  #        Distance_ft = ifelse(Site == 100, 407, Distance_ft),
+  #        Distance_ft = ifelse(Site == 98, 619, Distance_ft),
+  #        Distance_ft = ifelse(Site == 96, 790, Distance_ft),
+  #        Distance_ft = ifelse(Site == 94, 1015, Distance_ft),
+  #        Distance_ft = ifelse(Site == 92, 1132, Distance_ft),
+  #        Distance_ft = ifelse(Site == 90, 1843, Distance_ft),
+  #        Distance_ft = ifelse(Site == 88, 3326, Distance_ft),
+  #        Distance_ft = ifelse(Site == 50, 5011, Distance_ft),
+  #        Distance = Distance_ft*0.3048) |> 
+    mutate(Date = mdy(Date),
+           Site_code = ifelse(Site == 101, "S1", NA),
          Site_code = ifelse(Site == 100, "S2", Site_code),
          Site_code = ifelse(Site == 98, "P1", Site_code),
          Site_code = ifelse(Site == 96, "P2", Site_code),
@@ -46,7 +55,15 @@ eems_plotting <- eems24 |>
          Site_code = ifelse(Site == 88, "C4", Site_code),
          Site_code = ifelse(Site == 50, "50", Site_code)
          ) |> 
-  select(Reservoir, Site, Site_code, Depth_m, Date, Distance, FI., HIX., BIX., T., A., A.T., a254, a350, A254, A350 )
+  select(Reservoir, Site, Site_code, Depth_m, Date, FI., HIX., BIX., T., A., A.T., a254, a350, A254, A350 )
+
+
+eems_plotting <- left_join(eems, distances, by = c("Site_code", "Date")) |> 
+  mutate(Distance = Distance_ft*0.3048,
+         Dry_start = Dry_start*0.3048,
+         Dry_end = Dry_end*0.3048) |> 
+  select(Reservoir, Site, Site_code, Depth_m, Date, Distance, Dry_start, Dry_end, FI., HIX., BIX., T., A., A.T., a254, a350, A254, A350 )
+
 
 eems_plotting
 
@@ -57,7 +74,7 @@ eems_plotting
 
 ## EEMs plots 
 
-eems plots
+With Codes 
 
 ```{r}
 ##previous style plot
@@ -94,7 +111,7 @@ eems_plotting |>
   #facet_wrap(~Date, nrow = 3, scales = "free_y")+
   facet_grid(name~Date, scales = "free_y")+
   labs(x = element_blank())+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 14))+
   scale_color_gradient("Depth_m",  high = "red", low = "blue")
 
 ## hIX by date with depth on Y
@@ -105,7 +122,7 @@ eems_plotting |>
   geom_point()+
   scale_y_reverse()+
   facet_grid(name~Date, scales = "free_y")+ 
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 14))+
   # viridis::scale_color_viridis()
   scale_color_gradient(high = "black", low = "#CFCFCF") # has also done red to blue w/ some luck
   # scale_color_gradientn(colors = magma(256))
@@ -118,10 +135,40 @@ eems_plotting |>
   geom_point()+
   scale_y_reverse()+
   facet_grid(name~Date, scales = "free_y")+ 
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 14))+
   scale_color_gradient(high = "black", low = "#CFCFCF") # has also done red to blue w/ some luck
 
   
+
+```
+
+By Distance 
+
+```{r}
+
+## hIX by date with depth on Y
+eems_plotting |>
+  select(1:8, HIX.) |> 
+  ggplot(aes(x = Distance, y = Depth_m, color = HIX.))+
+  geom_point()+
+  scale_y_reverse()+
+  facet_wrap(~Date, scales = "fixed", ncol = 1)+ 
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = 10, ymax = 12), 
+            alpha = 0.1, fill = "blue" )+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
+  scale_color_gradient(high = "black", low = "#CFCFCF") # has also done red to blue w/ some luck
+
+## hIX by date with value on Y
+eems_plotting |>
+  select(1:8, HIX.) |> 
+  ggplot(aes(x = Distance, y = HIX., color = Depth_m))+
+  geom_point()+
+  facet_wrap(~Date, scales = "fixed", ncol = 1)+ 
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = 2, ymax = 2.5), 
+            alpha = 0.1, fill = "blue" )+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14))+
+  scale_color_gradient(high = "black", low = "#CFCFCF") # has also done red to blue w/ some luck
+
 
 ```
 
