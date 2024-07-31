@@ -437,6 +437,53 @@ hobos_C2 <- rbind(hobo_C2_b1, hobo_C2_b2, hobo_C2_b3, hobo_C2_b4, hobo_C2_b5,
 ```
 
 
+Density difference plots 
+
+```{r}
+head(hobos_C2)
+
+## July subset
+hobos_C2 |> 
+  filter(DateTime > ymd("2024-07-15")) |> 
+  mutate(Depth = paste0("wtr_", Depth)) |> 
+  pivot_wider(names_from = Depth, values_from = Temp_C) |> 
+  select(DateTime, wtr_0.1, wtr_2) |> 
+  mutate(wtr_0.1_dens = water.density(wtr_0.1),
+         wtr_2_dens = water.density(wtr_2),
+         Dens_diff = wtr_2_dens - wtr_0.1_dens,
+         Temp_diff = wtr_0.1 - wtr_2) |> 
+  ggplot(aes(x = DateTime))+
+  geom_point(aes(y = Dens_diff, color = "Dens"))+
+  geom_point(aes(y = Temp_diff, color = "TempDiff"))+
+  # geom_point(aes(y = wtr_0.1, color = "T 0.1"))+
+  # geom_point(aes(y = wtr_2, color = "T 2"))+
+  scale_x_datetime(date_breaks = "12 hour",  date_labels =  "%d (%H)") +
+  labs(x = "Date (Hour) ")
+
+
+hobos_C2 |> 
+  filter(DateTime > ymd("2024-05-15"),
+         DateTime < ymd("2024-06-01")) |> 
+  mutate(Depth = paste0("wtr_", Depth)) |> 
+  pivot_wider(names_from = Depth, values_from = Temp_C) |> 
+  select(DateTime, wtr_0.1, wtr_2) |> 
+  mutate(wtr_0.1_dens = water.density(wtr_0.1),
+         wtr_2_dens = water.density(wtr_2),
+         Dens_diff = wtr_2_dens - wtr_0.1_dens,
+         Temp_diff = wtr_0.1 - wtr_2) |> 
+  ggplot(aes(x = DateTime))+
+  geom_point(aes(y = Dens_diff, color = "Dens"))+
+  # geom_point(aes(y = Temp_diff, color = "TempDiff"))+
+  # geom_point(aes(y = wtr_0.1, color = "T 0.1"))+
+  # geom_point(aes(y = wtr_2, color = "T 2"))+
+  scale_x_datetime(date_breaks = "2 days",  date_labels =  " %d %b") +
+  labs(x = "Date (Hour) ")
+
+
+
+```
+
+
 
 Plot data
 ```{r}
