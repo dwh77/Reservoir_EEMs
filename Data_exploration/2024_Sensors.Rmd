@@ -33,7 +33,8 @@ ysi_L1 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/mast
 ccr_ysi <- ysi_L1 |>
   filter(Reservoir == "CCR") |>
   mutate(Date = as.Date(DateTime)) |>
-  filter(year(Date) > 2023)
+  filter(year(Date) > 2023,
+         Date %in% c(ymd("2024-07-31"), ymd("2024-08-01")))
 
 ```
 
@@ -45,7 +46,7 @@ CTD cleaning function
 ccr_ctd_clean <- function(data){
 
   #slice by depth for each reservoir
-    depths = seq(0.1, 23, by = 1)
+    depths = seq(0.1, 23, by = 0.5)
     df.final<-data.frame()
 
  for (i in 1:length(depths)){
@@ -348,6 +349,434 @@ ggplot(interp_temp, aes(x=x, y=y))+
 ```
 
 
+## CCR MSN Plots 
+
+Get data 
+```{r}
+#YSI 
+## midnight time for Site 90 has become the wrong day in L1 file
+# ysi_L1 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/YSI_PAR/ysi_L1.csv")
+
+ysi_gsheet <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1HbSBEFjMuK4Lxit5MRbATeiyljVAB-cpUNxO3dKd8V8/edit#gid=1787819257")
+
+ccr_ysi_MSN <- ysi_gsheet |>
+  filter(Reservoir == "CCR") |>
+  mutate(Date = as.Date(DateTime)) |>
+  filter(year(Date) > 2023,
+         Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
+  mutate(DateTime = ymd_hm(DateTime)) |> 
+  filter(Site %in% c(90,92)) |> 
+  mutate(sensor = "YSI") |> 
+  select(Site, DateTime, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm, sensor) 
+
+
+#CTD
+ctd_L1 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/Raw_CTD/ctd_L1.csv")
+
+ccr_ctd_clean_MSN <- function(data){
+
+  #slice by depth for each reservoir
+    depths = seq(0.1, 23, by = 0.5)
+    df.final<-data.frame()
+
+ for (i in 1:length(depths)){
+      
+      fp_layer <- data %>% 
+        # mutate(Date = as.Date(DateTime)) |> 
+        group_by(DateTime, Site) |>  
+        slice(which.min(abs(as.numeric(Depth_m) - depths[i])))
+      
+      # Bind each of the data layers together.
+      df.final = bind_rows(df.final, fp_layer)%>%
+      mutate(Depth_m = round(Depth_m, digits = 1)) |> 
+       dplyr::distinct() 
+ }
+    return(df.final)
+}
+
+ccr_ctd_MSN <- ctd_L1 |>
+  filter(Reservoir == "CCR") |>
+  mutate(Date = as.Date(DateTime)) |>
+  filter(Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
+  mutate(Site = ifelse(DateTime == ymd_hms("2024-08-01 13:16:37"), 90, Site)) #fix mislabeled cast
+
+ccr_ctd_MSN <- ccr_ctd_clean_MSN(ccr_ctd_MSN) |> 
+    select(Site, DateTime, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm) |> 
+    mutate(sensor = "CTD")  
+
+
+
+
+## Put data together
+ccr_MSN_profiles <- rbind(ccr_ysi_MSN, ccr_ctd_MSN)
+
+
+```
+
+
+Plotting 
+```{r}
+####### Get data together 
+
+ccr_MSN_grouped <- ccr_MSN_profiles |> 
+  mutate(DateTime = ymd_hms(DateTime),
+         Hour = hour(DateTime),
+         Date = as.Date(DateTime)) |> 
+    # mutate(Hour_group = ifelse(Hour %in% c(23,0), 0, NA),
+  #        Hour_group = ifelse(Hour %in% c(12,13), 12, Hour_group),
+  #        Hour_group = ifelse(Hour %in% c(20,21), 8, Hour_group),
+  #        Hour_group = ifelse(Hour %in% c(6), 6, Hour_group)
+  #        ) |> 
+  #mutate(DateTime_fixed = ifelse(Date == ymd("2024-07-31") & Hour_group == 0, DateTime + 1000, DateTime) ) |> 
+  #mutate(DateTime_fixed = as.POSIXct(DateTime_fixed, tz = "UTC")) |>  #this and previous mutate: manually force times  right before midnight to shift past midnight for faceting
+  ## mutate(SunTime = ifelse(Hour %in% c(23,0), "Midnight", NA),
+  ##        SunTime = ifelse(Hour %in% c(12,13), "Noon", SunTime),
+  ##       SunTime = ifelse(Hour %in% c(20,21), "Sunset", SunTime),
+  ##        SunTime = ifelse(Hour %in% c(6), "Sunrise", SunTime)
+  ##        ) |>
+  mutate(SunTime = ifelse(DateTime > ymd_hm("2024-07-31 12:00") & DateTime < ymd_hm("2024-07-31 14:00") , 
+                          "Noon 1", NA),
+         SunTime = ifelse(DateTime > ymd_hm("2024-07-31 20:00") & DateTime < ymd_hm("2024-07-31 22:00") , 
+                          "Sunset", SunTime),
+         SunTime = ifelse(DateTime > ymd_hm("2024-07-31 23:00") & DateTime < ymd_hm("2024-08-01 2:00") , 
+                          "Midnight", SunTime),
+         SunTime = ifelse(DateTime > ymd_hm("2024-08-01 6:00") & DateTime < ymd_hm("2024-08-01 8:00") , 
+                          "Sunrise", SunTime),
+         SunTime = ifelse(DateTime > ymd_hm("2024-08-01 12:00") & DateTime < ymd_hm("2024-08-01 14:00") , 
+                          "Noon 2", SunTime)
+         ) |>
+  filter(!(sensor == "YSI" & Site == 90)) |>
+  # mutate(DateTime_new = ymd_h(paste(as.Date(DateTime_fixed), Hour_group, sep = " "))) |> 
+  mutate(Distance_ft = ifelse(Site == 92, 1132, NA),
+         Distance_ft = ifelse(Site == 90, 1843, Distance_ft),
+         Distance_ft = ifelse(Site == 88, 3326, Distance_ft),
+         Distance = Distance_ft*0.3048) 
+  
+
+####### site 92 
+ccr_MSN_grouped |> 
+  select(Site, SunTime, sensor, Depth_m, Temp_C, DOsat_percent, SpCond_uScm) |> 
+  filter(Site == 92) |> 
+  pivot_longer(-c(1:4)) |> 
+  ggplot(aes(x = value, y = Depth_m, color = SunTime))+
+  facet_wrap(~name, scales = "free_x")+
+  geom_line(orientation = "y", size = 1)+  geom_point(size = 2)+
+  scale_y_reverse()+  theme_bw() + theme(text = element_text(size = 18))+ labs(title = "C2")
+
+
+####### site 90
+ccr_MSN_grouped |> 
+  select(Site, SunTime, sensor, Depth_m, Temp_C, DOsat_percent, SpCond_uScm) |> 
+  filter(Site == 90,
+         sensor == "CTD") |> 
+  pivot_longer(-c(1:4)) |> 
+  ggplot(aes(x = value, y = Depth_m, color = SunTime))+
+  facet_wrap(~name, scales = "free_x")+
+  geom_line(orientation = "y", size = 1)+  geom_point(size = 2)+
+  scale_y_reverse()+  theme_bw() + theme(text = element_text(size = 18))+ labs(title = "C3")
+
+# ccr_MSN_grouped |> 
+#   select(Site, SunTime, sensor, Depth_m, Temp_C, DOsat_percent, SpCond_uScm) |> 
+#   filter(Site == 90,
+#          sensor == "YSI") |> 
+#   pivot_longer(-c(1:4)) |> 
+#   ggplot(aes(x = value, y = Depth_m, color = SunTime))+
+#   facet_wrap(~name, scales = "free_x")+
+#   geom_line(orientation = "y", size = 1)+  geom_point(size = 2)+
+#   scale_y_reverse()+  theme_bw() + theme(text = element_text(size = 18))+ labs(title = "C3")
+
+
+####### site 88
+ccr_MSN_grouped |> 
+  select(Site, SunTime, sensor, Depth_m, Temp_C, DOsat_percent, SpCond_uScm) |> 
+  filter(Site == 88) |> 
+  pivot_longer(-c(1:4)) |> 
+  ggplot(aes(x = value, y = Depth_m, color = SunTime))+
+  facet_wrap(~name, scales = "free_x")+
+  geom_line(orientation = "y", size = 1)+  geom_point(size = 2)+
+  scale_y_reverse()+  theme_bw() + theme(text = element_text(size = 18))+ labs(title = "C4")
+ 
+
+
+###### all sites 
+
+time_levels <- c("Noon 1", "Sunset", "Midnight", "Sunrise", "Noon 2")
+
+### flipping so value is on y and color is depth
+ccr_MSN_grouped |> 
+  select(Site, DateTime, SunTime, Distance, Depth_m, Temp_C) |> 
+  pivot_longer(-c(1:5)) |> 
+  ggplot(aes(x = Distance, y = value, color = Depth_m))+
+  geom_point()+
+  facet_grid(name~factor(SunTime, levels = time_levels), scales = "free_y")+
+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))+
+  labs(x= "Distance (m)")+
+  scale_color_gradient(high = "blue", low = "red") 
+
+#depth on y 
+ccr_MSN_grouped |> 
+  select(Site, DateTime, SunTime, Distance, Depth_m, Temp_C) |> 
+  pivot_longer(-c(1:5)) |> 
+  ggplot(aes(x = Distance, y = Depth_m, color = value))+
+  geom_point()+
+  scale_y_reverse()+
+  facet_grid(name~factor(SunTime, levels = time_levels), scales = "free_y")+
+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))+
+  labs(x= "Distance (m)")+
+  scale_color_gradient(high = "black", low = "#CFCFCF")  # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
+
+
+
+```
+
+Density Diffs 
+
+```{r}
+ccr_MSN_grouped
+
+dens_diff_data <- ccr_MSN_grouped |> 
+  select(Site, SunTime, Depth_m, Temp_C) |> 
+  group_by(Site, SunTime) |> 
+  mutate(top_depth = min(Depth_m),
+         bot_depth = max(Depth_m)) |> 
+  mutate(wtr_top = ifelse(Depth_m == top_depth, Temp_C, NA),
+         wtr_top = max(wtr_top, na.rm = T),
+         wtr_bot = ifelse(Depth_m == bot_depth, Temp_C, NA),
+         wtr_bot = max(wtr_bot, na.rm = T)) |> 
+  mutate(temp_diff = wtr_top - wtr_bot,
+            dens_diff = water.density(wtr_bot) - water.density(wtr_top)) |> 
+  select(Site, SunTime, wtr_top, wtr_bot, temp_diff, dens_diff) |> 
+  distinct()
+
+dens_diff_data |> 
+  select(Site, SunTime, temp_diff, dens_diff) |> 
+  pivot_longer(-c(1:2)) |> 
+  ggplot(aes(x = factor(SunTime, levels = time_levels), y = value))+
+  geom_point()+
+  geom_hline(yintercept = 0)+
+  geom_hline(yintercept = 0.1)+
+  geom_hline(yintercept = 1)+
+  facet_grid(name~Site, scales = "free_y")+
+  labs(x = element_blank())+
+  theme_bw() + theme(text = element_text(size = 18), axis.text.x = element_text(angle = 45, vjust = 0.5))
+
+
+
+
+```
+
+
+
+
+Heatmaps 
+
+```{r}
+
+#### Noon 1
+fp_new <- ccr_MSN_grouped |> 
+  filter(SunTime == 'Noon 1') 
+
+#Temp
+  interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$Temp_C,
+                   xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10),
+                   yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.1),
+                   extrap = T, linear = T, duplicate = "strip")
+  interp_temp <- akima::interp2xyz(interp_temp, data.frame=T)
+
+noon1 <- ggplot(interp_temp, aes(x=x, y=y))+
+    geom_raster(aes(fill=z))+
+    scale_y_reverse(expand = c(0,0))+
+    scale_x_continuous(expand = c(0, 0)) +
+    geom_point(data = fp_new, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ 
+    scale_fill_gradientn(limits = c(10,30) , colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = element_blank(), y = "Depth (m)", title = "Temp CCR 31July - Noon")+
+    theme_bw()
+
+
+#### Sunset
+fp_new <- ccr_MSN_grouped |> 
+  filter(SunTime == 'Sunset') 
+
+  interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$Temp_C,
+                   xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10),
+                   yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.1),
+                   extrap = T, linear = T, duplicate = "strip")
+  interp_temp <- akima::interp2xyz(interp_temp, data.frame=T)
+
+sunset <- ggplot(interp_temp, aes(x=x, y=y))+
+    geom_raster(aes(fill=z))+
+    scale_y_reverse(expand = c(0,0))+
+    scale_x_continuous(expand = c(0, 0)) +
+    geom_point(data = fp_new, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ 
+    scale_fill_gradientn(limits = c(10,30), colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = element_blank(), y = "Depth (m)", title = "Temp CCR 31July - Sunset")+
+    theme_bw()
+
+#### Midnight
+fp_new <- ccr_MSN_grouped |> 
+  filter(SunTime == 'Midnight') 
+
+  interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$Temp_C,
+                   xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10),
+                   yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.1),
+                   extrap = T, linear = T, duplicate = "strip")
+  interp_temp <- akima::interp2xyz(interp_temp, data.frame=T)
+
+midnight <- ggplot(interp_temp, aes(x=x, y=y))+
+    geom_raster(aes(fill=z))+
+    scale_y_reverse(expand = c(0,0))+
+    scale_x_continuous(expand = c(0, 0)) +
+    geom_point(data = fp_new, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ 
+    scale_fill_gradientn(limits = c(10,30), colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = element_blank(), y = "Depth (m)", title = "Temp CCR 1Aug - Midnight")+
+    theme_bw()
+
+#### Sunrise
+fp_new <- ccr_MSN_grouped |> 
+  filter(SunTime == 'Sunrise') 
+
+  interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$Temp_C,
+                   xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10),
+                   yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.1),
+                   extrap = T, linear = T, duplicate = "strip")
+  interp_temp <- akima::interp2xyz(interp_temp, data.frame=T)
+
+sunrise <- ggplot(interp_temp, aes(x=x, y=y))+
+    geom_raster(aes(fill=z))+
+    scale_y_reverse(expand = c(0,0))+
+    scale_x_continuous(expand = c(0, 0)) +
+    geom_point(data = fp_new, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ 
+    scale_fill_gradientn(limits = c(10,30), colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = element_blank(), y = "Depth (m)", title = "Temp CCR 1Aug - Sunrise")+
+    theme_bw()
+
+#### Noon 2
+fp_new <- ccr_MSN_grouped |> 
+  filter(SunTime == 'Noon 2') 
+
+  interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$Temp_C,
+                   xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10),
+                   yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.1),
+                   extrap = T, linear = T, duplicate = "strip")
+  interp_temp <- akima::interp2xyz(interp_temp, data.frame=T)
+
+noon2 <- ggplot(interp_temp, aes(x=x, y=y))+
+    geom_raster(aes(fill=z))+
+    scale_y_reverse(expand = c(0,0))+
+    scale_x_continuous(expand = c(0, 0)) +
+    geom_point(data = fp_new, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ 
+    scale_fill_gradientn(limits = c(10,30), colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "Temp CCR 1Aug - Noon")+
+    theme_bw()
+
+
+### plots 
+noon1
+sunset
+midnight
+sunrise
+noon2
+
+library(patchwork)
+noon1/sunset/midnight/sunrise/noon2
+
+
+```
+
+Cond heatmaps 
+```{r}
+#### Noon 1
+fp_new <- ccr_MSN_grouped |>   filter(SunTime == 'Noon 1', !is.na(SpCond_uScm)) 
+
+#Temp
+  interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$SpCond_uScm,
+                   xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10), yo = seq(min(fp_new$Depth_m),max(fp_new$Depth_m), by = 0.1), extrap = T, linear = T, duplicate = "strip")
+  interp_temp <- akima::interp2xyz(interp_temp, data.frame=T)
+
+noon1 <- ggplot(interp_temp, aes(x=x, y=y))+
+    geom_raster(aes(fill=z))+
+    scale_y_reverse(expand = c(0,0))+
+    scale_x_continuous(expand = c(0, 0)) +
+    geom_point(data = fp_new, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ 
+    scale_fill_gradientn(limits = c(108,130) , colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = element_blank(), y = "Depth (m)", title = "Temp CCR 31July - Noon")+
+    theme_bw()
+
+
+#### Sunset
+fp_new <- ccr_MSN_grouped |>   filter(SunTime == 'Sunset') 
+
+  interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$SpCond_uScm,
+                   xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10),  yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.1), extrap = T, linear = T, duplicate = "strip")
+  interp_temp <- akima::interp2xyz(interp_temp, data.frame=T)
+
+sunset <- ggplot(interp_temp, aes(x=x, y=y))+
+    geom_raster(aes(fill=z))+ scale_y_reverse(expand = c(0,0))+    scale_x_continuous(expand = c(0, 0)) +
+    geom_point(data = fp_new, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ 
+    scale_fill_gradientn(limits = c(108,130), colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "SpCond CCR 31July - Sunset")+
+    theme_bw()
+
+#### Midnight
+fp_new <- ccr_MSN_grouped |> 
+  filter(SunTime == 'Midnight') 
+
+  interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$SpCond_uScm,
+                   xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10),  yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.1),         extrap = T, linear = T, duplicate = "strip")
+  interp_temp <- akima::interp2xyz(interp_temp, data.frame=T)
+
+midnight <- ggplot(interp_temp, aes(x=x, y=y))+
+    geom_raster(aes(fill=z))+    scale_y_reverse(expand = c(0,0))+    scale_x_continuous(expand = c(0, 0)) +
+    geom_point(data = fp_new, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ 
+    scale_fill_gradientn(limits = c(108,130), colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "SpCond CCR 1Aug - Midnight")+
+    theme_bw()
+
+#### Sunrise
+fp_new <- ccr_MSN_grouped |> 
+  filter(SunTime == 'Sunrise') 
+
+  interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$SpCond_uScm,
+                   xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10),  yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.1),   extrap = T, linear = T, duplicate = "strip")
+  interp_temp <- akima::interp2xyz(interp_temp, data.frame=T)
+
+sunrise <- ggplot(interp_temp, aes(x=x, y=y))+
+    geom_raster(aes(fill=z))+    scale_y_reverse(expand = c(0,0))+    scale_x_continuous(expand = c(0, 0)) +
+    geom_point(data = fp_new, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ 
+    scale_fill_gradientn(limits = c(108,130), colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "SpCond CCR 1Aug - Sunrise")+
+    theme_bw()
+
+#### Noon 2
+fp_new <- ccr_MSN_grouped |> 
+  filter(SunTime == 'Noon 2') 
+
+  interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$SpCond_uScm,
+                   xo = seq(min(fp_new$Distance), max(fp_new$Distance), by = 10),   yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.1),                 extrap = T, linear = T, duplicate = "strip")
+  interp_temp <- akima::interp2xyz(interp_temp, data.frame=T)
+
+noon2 <- ggplot(interp_temp, aes(x=x, y=y))+
+    geom_raster(aes(fill=z))+    scale_y_reverse(expand = c(0,0))+    scale_x_continuous(expand = c(0, 0)) +
+    geom_point(data = fp_new, aes(x = Distance, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ 
+    scale_fill_gradientn(limits = c(108,130), colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "SpCond CCR 1Aug - Noon")+
+    theme_bw()
+
+
+### plots 
+noon1
+sunset
+midnight
+sunrise
+noon2
+
+library(patchwork)
+noon1/sunset/midnight/sunrise/noon2
+
+```
+
+
+
 ## Pool and Cove HOBO buoys 
 
 P1 
@@ -461,23 +890,23 @@ hobos_C2 |>
   labs(x = "Date (Hour) ")
 
 
-hobos_C2 |> 
-  filter(DateTime > ymd("2024-05-15"),
-         DateTime < ymd("2024-06-01")) |> 
-  mutate(Depth = paste0("wtr_", Depth)) |> 
-  pivot_wider(names_from = Depth, values_from = Temp_C) |> 
-  select(DateTime, wtr_0.1, wtr_2) |> 
-  mutate(wtr_0.1_dens = water.density(wtr_0.1),
-         wtr_2_dens = water.density(wtr_2),
-         Dens_diff = wtr_2_dens - wtr_0.1_dens,
-         Temp_diff = wtr_0.1 - wtr_2) |> 
-  ggplot(aes(x = DateTime))+
-  geom_point(aes(y = Dens_diff, color = "Dens"))+
-  # geom_point(aes(y = Temp_diff, color = "TempDiff"))+
-  # geom_point(aes(y = wtr_0.1, color = "T 0.1"))+
-  # geom_point(aes(y = wtr_2, color = "T 2"))+
-  scale_x_datetime(date_breaks = "2 days",  date_labels =  " %d %b") +
-  labs(x = "Date (Hour) ")
+# hobos_C2 |> 
+#   filter(DateTime > ymd("2024-05-15"),
+#          DateTime < ymd("2024-06-01")) |> 
+#   mutate(Depth = paste0("wtr_", Depth)) |> 
+#   pivot_wider(names_from = Depth, values_from = Temp_C) |> 
+#   select(DateTime, wtr_0.1, wtr_2) |> 
+#   mutate(wtr_0.1_dens = water.density(wtr_0.1),
+#          wtr_2_dens = water.density(wtr_2),
+#          Dens_diff = wtr_2_dens - wtr_0.1_dens,
+#          Temp_diff = wtr_0.1 - wtr_2) |> 
+#   ggplot(aes(x = DateTime))+
+#   geom_point(aes(y = Dens_diff, color = "Dens"))+
+#   # geom_point(aes(y = Temp_diff, color = "TempDiff"))+
+#   # geom_point(aes(y = wtr_0.1, color = "T 0.1"))+
+#   # geom_point(aes(y = wtr_2, color = "T 2"))+
+#   scale_x_datetime(date_breaks = "2 days",  date_labels =  " %d %b") +
+#   labs(x = "Date (Hour) ")
 
 
 
