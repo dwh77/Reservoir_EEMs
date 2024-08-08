@@ -12,6 +12,7 @@ library(tidyverse)
 library(ggpubr)
 library(colorRamps) #for heatmap
 library(RColorBrewer) #for heatmap 
+library(rLakeAnalyzer)
 # library(scales) #for date format on plots
 # library(patchwork) #arrange figures w/ slashes and lines
 # library(plotly)
@@ -355,16 +356,14 @@ Get data
 ```{r}
 #YSI 
 ## midnight time for Site 90 has become the wrong day in L1 file
-# ysi_L1 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/YSI_PAR/ysi_L1.csv")
+ysi_L1 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/YSI_PAR/ysi_L1.csv")
 
-ysi_gsheet <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1HbSBEFjMuK4Lxit5MRbATeiyljVAB-cpUNxO3dKd8V8/edit#gid=1787819257")
-
-ccr_ysi_MSN <- ysi_gsheet |>
+ccr_ysi_MSN <- ysi_L1 |>
   filter(Reservoir == "CCR") |>
   mutate(Date = as.Date(DateTime)) |>
   filter(year(Date) > 2023,
          Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
-  mutate(DateTime = ymd_hm(DateTime)) |> 
+  mutate(DateTime = ymd_hms(DateTime)) |> 
   filter(Site %in% c(90,92)) |> 
   mutate(sensor = "YSI") |> 
   select(Site, DateTime, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm, sensor) 
@@ -397,8 +396,7 @@ ccr_ctd_clean_MSN <- function(data){
 ccr_ctd_MSN <- ctd_L1 |>
   filter(Reservoir == "CCR") |>
   mutate(Date = as.Date(DateTime)) |>
-  filter(Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
-  mutate(Site = ifelse(DateTime == ymd_hms("2024-08-01 13:16:37"), 90, Site)) #fix mislabeled cast
+  filter(Date %in% c(ymd("2024-07-31"), ymd("2024-08-01")))  
 
 ccr_ctd_MSN <- ccr_ctd_clean_MSN(ccr_ctd_MSN) |> 
     select(Site, DateTime, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm) |> 
@@ -565,10 +563,59 @@ dens_diff_data |>
 
 ```
 
+Heatmaps Time 
+
+```{r}
+#### C4
+fp_new <- ccr_MSN_grouped |> 
+  filter(Site == 88) 
+
+#Temp
+  interp_temp <- akima::interp(x=as.numeric(fp_new$DateTime), y = fp_new$Depth_m, z = fp_new$Temp_C,
+                   xo = seq(min(fp_new$DateTime), max(fp_new$DateTime), by = 5000),
+                   yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m), by = 0.1),
+                   extrap = T, linear = T, duplicate = "strip")
+  interp_temp <- akima::interp2xyz(interp_temp, data.frame=T)
+  interp_temp$DateTime <- as.POSIXct(interp_temp$x, tz = "UTC")
+
+ggplot(interp_temp, aes(x=DateTime, y=y))+
+    geom_raster(aes(fill=z))+
+    scale_y_reverse(expand = c(0,0))+
+    geom_point(data = fp_new, aes(x = DateTime, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ 
+    scale_fill_gradientn(limits = c(10,30) , colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = element_blank(), y = "Depth (m)", title = "Temp CCR C4")+
+    theme_bw()
+
+
+#### C3
+fp_new <- ccr_MSN_grouped |> 
+  filter(Site == 90) 
+
+#Temp
+  interp_temp <- akima::interp(x=as.numeric(fp_new$DateTime), y = fp_new$Depth_m, z = fp_new$Temp_C,
+                   xo = seq(min(fp_new$DateTime), max(fp_new$DateTime), by = 5000),
+                   yo = seq(min(fp_new$Depth_m), max(fp_new$Depth_m)*2, by = 0.1),
+                   extrap = T, linear = T, duplicate = "strip")
+  interp_temp <- akima::interp2xyz(interp_temp, data.frame=T)
+  interp_temp$DateTime <- as.POSIXct(interp_temp$x, tz = "UTC")
+
+ggplot(interp_temp, aes(x=DateTime, y=y))+
+    geom_raster(aes(fill=z))+
+    scale_y_reverse(expand = c(0,0))+
+    geom_point(data = fp_new, aes(x = DateTime, y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ 
+    scale_fill_gradientn(limits = c(10,30) , colours = colorRamps::blue2green2red(60), na.value="gray")+
+    labs(x = element_blank(), y = "Depth (m)", title = "Temp CCR C3")+
+    theme_bw()
 
 
 
-Heatmaps 
+
+
+```
+
+
+
+Heatmaps Distance
 
 ```{r}
 

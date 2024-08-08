@@ -138,6 +138,18 @@ eems_plotting |>
   theme_bw()+ theme(legend.position = "right", text = element_text(size = 14))+
   scale_color_gradient(high = "black", low = "#CFCFCF") # has also done red to blue w/ some luck
 
+
+##### NEW STYLE TRials 
+eems_plotting |>
+  select(1:6, BIX.) |> 
+  pivot_longer(-c(1:6)) |>
+  ggplot(aes(x = value, y = Depth_m, color = as.factor(Distance)))+
+  geom_point()+
+  geom_line(orientation = "y")+
+  scale_y_reverse()+
+  facet_wrap(~Date, scales = "free_y")+ 
+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 14))
+  # scale_color_gradient(high = "black", low = "#CFCFCF") # has also done red to blue w/ some luck
   
 
 ```
