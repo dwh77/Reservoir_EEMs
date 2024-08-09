@@ -375,7 +375,7 @@ ctd_L1 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/mast
 ccr_ctd_clean_MSN <- function(data){
 
   #slice by depth for each reservoir
-    depths = seq(0.1, 23, by = 0.5)
+    depths = seq(0.1, 23, by = 0.1)
     df.final<-data.frame()
 
  for (i in 1:length(depths)){
@@ -402,6 +402,12 @@ ccr_ctd_MSN <- ccr_ctd_clean_MSN(ccr_ctd_MSN) |>
     select(Site, DateTime, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm) |> 
     mutate(sensor = "CTD")  
 
+##full ctd check
+ccr_ctd_MSN |> 
+  ggplot(aes(x = Temp_C, y = Depth_m, color = as.factor(DateTime))) + 
+  geom_line(orientation = 'y', size = 1.2)+
+  scale_y_reverse()+
+  facet_wrap(~Site, scales = "free")
 
 
 
@@ -524,6 +530,28 @@ ccr_MSN_grouped |>
   scale_color_gradient(high = "black", low = "#CFCFCF")  # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
 
 
+## Lines instead of heatmpas
+ccr_MSN_grouped |> 
+  select(Site, DateTime, SunTime, Distance, Depth_m, Temp_C) |> 
+  pivot_longer(-c(1:5)) |> 
+  filter(Site == 90 ) |> 
+  ggplot(aes(x = DateTime, y = value, color = as.factor(Depth_m)))+
+  geom_point()+
+  geom_line()+
+  # facet_wrap(~Site, scales = "free_y", ncol =1 )+
+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))
+
+
+#other 
+ccr_MSN_grouped |> 
+  select(Site, SunTime, sensor, Depth_m, Temp_C) |> 
+  #filter( SunTime == "Sunrise") |> 
+  ggplot(aes(x = Temp_C, y = Depth_m))+
+  facet_grid(factor(SunTime, levels = time_levels)~Site, scales = "free_x")+
+  geom_line(orientation = "y", size = 1)+  geom_point(size = 2)+
+  scale_y_reverse()+  theme_bw() + theme(text = element_text(size = 18), legend.position = "top")
+
+
 
 ```
 
@@ -531,6 +559,9 @@ Density Diffs
 
 ```{r}
 ccr_MSN_grouped
+
+time_levels <- c("Noon 1", "Sunset", "Midnight", "Sunrise", "Noon 2")
+
 
 dens_diff_data <- ccr_MSN_grouped |> 
   select(Site, SunTime, Depth_m, Temp_C) |> 
