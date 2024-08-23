@@ -22,9 +22,9 @@ add_underscore <- function(x, position = 2) {
 
 #### Read in all EEM results files and make once csv for given fluorometer day ----
 
-list.files(path = "./Processed_Data/20240822_DH", pattern = "results*", full.names = T)
+list.files(path = "./Processed_Data/20240823_DH", pattern = "results*", full.names = T)
 
-results <- list.files(path = "./Processed_Data/20240822_DH", pattern = "results*", full.names = T) |> 
+results <- list.files(path = "./Processed_Data/20240823_DH", pattern = "results*", full.names = T) |> 
   base::lapply(read_xls, sheet = 'EEM Results') |> 
   bind_rows() |> 
   rename(SampleName = 1)
@@ -62,8 +62,8 @@ eems_names <- left_join(names, results, by = c("SampleName"))
 
 
 #### Bring in Abs values ----
-run_date <- "20240822"
-abs <- read.csv("./Processed_Data/20240822_DH/20240822_CDOMall.csv")
+run_date <- "20240823"
+abs <- read.csv("./Processed_Data/20240823_DH/20240823_CDOMall.csv")
 
 #works to get a254 and a350
 abs_forbind <- abs |> 
@@ -86,7 +86,7 @@ abs_forbind <- abs |>
 #### Bind eems names to abs and export 
 export <- left_join(eems_names, abs_forbind, by = "SampleName")
 
-write.csv(export, "./Processed_Data/20240822_DH/Results_EEMs_Abs_20240822.csv", row.names = F)
+write.csv(export, "./Processed_Data/20240823_DH/Results_EEMs_Abs_20240823.csv", row.names = F)
 
 
 
