@@ -57,7 +57,7 @@ eems <- eems24 |>
          Site_code = ifelse(Site == 88, "C4", Site_code),
          Site_code = ifelse(Site == 50, "50", Site_code)
          ) |> 
-  select(Reservoir, Site, Site_code, Depth_m, Date, FI., HIX., BIX., T., A., A.T., a254, a350, A254, A350 )
+  select(Reservoir, Site, Site_code, Depth_m, Date, FI., HIX., BIX., T., A., A.T., a254, a350, A254, A350, NOTES)
 
 
 eems_plotting <- left_join(eems, distances, by = c("Site_code", "Date")) |> 
@@ -65,7 +65,7 @@ eems_plotting <- left_join(eems, distances, by = c("Site_code", "Date")) |>
          Dry_start = Dry_start*0.3048,
          Dry_end = Dry_end*0.3048) |> 
   filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
-  select(Reservoir, Site, Site_code, Depth_m, Date, Distance, Dry_start, Dry_end, FI., HIX., BIX., T., A., A.T., a254, a350)
+  select(Reservoir, Site, Site_code, Depth_m, Date, Distance, Dry_start, Dry_end, FI., HIX., BIX., T., A., A.T., a254, a350, NOTES)
 
 
 eems_plotting
@@ -78,13 +78,15 @@ eems_plotting
 ```{r}
 #summarize data 
 eems_summary <- eems_plotting |> 
+  filter(!NOTES %in% c("PART")) |> 
   rename(HIX = HIX.) |>  #### can just change the rename here for what value you want to look at
-  select(Site, Depth_m, Date, Distance, HIX) |> 
-  group_by(Site, Depth_m, Date, Distance) |> 
+  select(Site, Depth_m, Date, Distance, Dry_start, Dry_end, HIX) |> 
+  group_by(Site, Depth_m, Date, Dry_start, Dry_end, Distance) |> 
   summarise(HIX_mean = mean(HIX, na.rm = T),
             HIX_min = min(HIX, na.rm = T),
             HIX_max = max(HIX, na.rm = T)) |> 
   mutate(Rep = ifelse(HIX_mean != HIX_min, "Y", "N"))
+
 
 
 
@@ -215,7 +217,9 @@ By Distance
 #   scale_color_gradient(high = "black", low = "#CFCFCF") # has also done red to blue w/ some luck
 
 ## hIX by date with value on Y
+#not averaging rep
 eems_plotting |>
+  filter(!NOTES %in% c("PART")) |> 
   select(1:8, HIX.) |> 
   ggplot(aes(x = Distance, y = HIX., color = Depth_m))+
   geom_point()+
@@ -223,7 +227,42 @@ eems_plotting |>
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = 2, ymax = 2.5), 
              alpha = 0.1, fill = "blue" )+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
-  scale_color_gradient(high = "black", low = "#CFCFCF") # has also done red to blue w/ some luck
+  scale_color_gradient(high = "black", low = "#CFCFCF", breaks = c(3,6,9,12)) # has also done red to blue w/ some luck
+
+#averaging reps 
+eems_summary |> 
+  ggplot(aes(x = Distance, y = HIX_mean, color = Depth_m)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
+  facet_wrap(~Date, nrow = 4)+
+  facet_wrap(~Date, scales = "fixed", ncol = 1)+ 
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = 2, ymax = 2.5), 
+             alpha = 0.1, fill = "blue" )+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_gradient(high = "black", low = "#CFCFCF", breaks = c(3,6,9,12)) # has also done red to blue w/ some luck
+
+
+#averaging reps  AND TRYING DEPTH SHAPE GROUPS
+levels_depthgroup <- c("0.1m", "0.2 - 1m",  "1 - 2m", "4 - 7m", "9m", " >= 10m")
+
+eems_summary |> 
+  mutate(depth_group = ifelse(Depth_m == 0.1, "0.1m", NA),
+         depth_group = ifelse(Depth_m <= 1 & Depth_m > 0.1, "0.2 - 1m", depth_group),
+         depth_group = ifelse(Depth_m <= 2 & Depth_m > 1, "1 - 2m", depth_group),
+         depth_group = ifelse(Depth_m <= 7 & Depth_m >= 4, "4 - 7m", depth_group),
+         depth_group = ifelse(Depth_m == 9 , "9m", depth_group),
+         depth_group = ifelse(Depth_m >= 10 , " >= 10m", depth_group)
+         ) |> 
+  ggplot(aes(x = Distance, y = HIX_mean, color = factor(depth_group, levels = levels_depthgroup))) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
+  facet_wrap(~Date, nrow = 4)+
+  facet_wrap(~Date, scales = "fixed", ncol = 1)+ 
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = 2, ymax = 2.5), # for BIX use 0.5 and 0.51
+             alpha = 0.1, fill = "blue" )+
+  labs(color = "Depth", y = "HIX")+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+ guides(colour = guide_legend(nrow = 1))
+
 
 
 ```
