@@ -35,7 +35,7 @@ ccr_ysi <- ysi_L1 |>
   filter(Reservoir == "CCR") |>
   mutate(Date = as.Date(DateTime)) |>
   filter(year(Date) > 2023,
-         Date %in% c(ymd("2024-07-31"), ymd("2024-08-01")))
+         !Date %in% c(ymd("2024-07-31"), ymd("2024-08-01")))
 
 ```
 
@@ -104,6 +104,34 @@ ccr_ctd_24 |>
 
 ```
 
+## CCR ADCP plots 
+
+```{r}
+#all sites
+ccr_ctd_24 |> 
+  filter(Date == ymd("2024-08-15")) |> 
+  filter(Turbidity_NTU < 50) |> 
+  select(Site, Depth_m, Temp_C, DOsat_percent, SpCond_uScm, Chla_ugL, Turbidity_NTU, CDOM_ugL) |> 
+  pivot_longer(-c(1:2)) |> 
+  ggplot(aes(x = value, y = Depth_m))+
+  geom_line(orientation = "y")+  scale_y_reverse()+
+  facet_grid(Site~name, scales = "free")+  theme_bw()+ theme(text = element_text(size = 18))
+
+#C3
+ccr_ctd_24 |> 
+  filter(Date == ymd("2024-08-15"), Site == 90) |> 
+  filter(Turbidity_NTU < 50) |> 
+  select(Site, Depth_m, Temp_C, SpCond_uScm, Turbidity_NTU, CDOM_ugL) |> 
+  pivot_longer(-c(1:2)) |> 
+  ggplot(aes(x = value, y = Depth_m))+
+  geom_line(orientation = "y")+  scale_y_reverse()+
+  facet_grid(Site~name, scales = "free")+  theme_bw()+ theme(text = element_text(size = 18))
+
+
+```
+
+
+
 ## Bring CTD to YSI
 
 ```{r}
@@ -117,6 +145,7 @@ distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distance
 ##bind data together
 ctd_bind <- ccr_ctd_24 |> 
   select(Reservoir, Site, Date, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm) |> 
+  filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"), ymd("2024-08-15"))) |>  #non EEM sample days
   mutate(SpCond_uScm = ifelse(SpCond_uScm < 100, NA, SpCond_uScm)  ) # remove low values that aren't realistic
 
 ysi_bind <- ccr_ysi |> 
