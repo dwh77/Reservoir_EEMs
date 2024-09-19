@@ -138,7 +138,7 @@ ccr_ctd_24 |>
 ## grab distances to bind in 
 distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances.csv") |> 
   mutate(Date = mdy(Date)) |> 
-  select(-Notes) |> 
+  select(-c(13,14)) |> 
   pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft")
 
 
@@ -308,9 +308,9 @@ sensors |>
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = 10, ymax = 12), 
             alpha = 0.1, fill = "blue" )+
   facet_grid(name~Date, scales = "free_y")+
-  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
   labs(x= "Distance (m)")+
-  scale_color_gradient(high = "blue", low = "red") # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
+  scale_color_gradient(high = "black", low = "#CFCFCF", , breaks = c(3,6,9,12)) # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
 
 ```
 
