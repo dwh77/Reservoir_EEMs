@@ -35,11 +35,13 @@ raw_q |>
 ```
 
 
-
 ## HOBO water level calculations
 
 ```{r}
 ########### get data ###############
+
+### CCR dam for water level
+ccr_dam_git <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/refs/heads/ccre-dam-data-qaqc/ccre-waterquality_L1.csv") 
 
 ### CCR met 
 #ccr_met_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1105/2/5c9281623ab7676ca1be85ee1761bf28")
@@ -116,6 +118,21 @@ daily_rain <- ccr_met_git |>
   ggplot(aes(x = Date, y = Daily_rain))+
   geom_point()+
   geom_line()
+ 
+ ##Dam water level plot
+ daily_dam_waterlevel <- ccr_dam_git |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  group_by(Date) |> 
+  summarise(#pressure = mean(LvlPressure_psi_13, na.rm = T),
+            depth = mean(LvlDepth_m_13, na.rm = T)) |> 
+   left_join(daily_rain, by = "Date")
+
+ daily_dam_waterlevel |> 
+   pivot_longer(-1) |> 
+   filter(Date > ymd("2024-08-01")) |> 
+  ggplot(aes(x = Date, y = value))+
+  geom_point()+
+   facet_wrap(~name, ncol = 1, scales = "free_y")
   
 #get daily water level and precip
 waterlevel_daily <- waterlevel_correct |> 
