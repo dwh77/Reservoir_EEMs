@@ -12,29 +12,6 @@ library(ggpmisc) #stat poly line
 ```
 
 
-## Get flowmate Q
-
-```{r}
-raw_q <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1niKKxyHLZfqnJEZ93nu49yCn0Wv_duW33bYS81PHY6o/edit#gid=0")
-
-#manual Q function
-# devtools::source_url("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Scripts/L1_generation_scripts/ManualDischarge_qaqc.R")
-
-raw_q |> 
-  filter(Reservoir == "CCR", 
-         Site == 101) |> 
-    filter(Method == "Flowmate") %>%   #filter to just flowmate measurements 
-  mutate(Depth_m = Depth_cm/100,    
-         Velocity_m.s = ifelse(Velocity_unit %in% c("ft_s", "ft/s"), Velocity*0.3048, Velocity), 
-         Discharge = Depth_m * Velocity_m.s * WidthInterval_m    ) %>% 
-  group_by(Reservoir, Site, Date) %>% #group by site and date
-  summarise(Discharge_m3s = sum(Discharge, na.rm = T),  #sum across intervals to get final discharge
-         Method = "F") 
-  
-  
-```
-
-
 ## HOBO water level calculations
 
 ```{r}
@@ -225,4 +202,40 @@ left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |>
 
 
 ```
+
+
+## Get flowmate Q
+
+```{r}
+raw_q <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1niKKxyHLZfqnJEZ93nu49yCn0Wv_duW33bYS81PHY6o/edit#gid=0")
+
+#manual Q function
+# devtools::source_url("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Scripts/L1_generation_scripts/ManualDischarge_qaqc.R")
+
+ccr_flowmate <- raw_q |> 
+  filter(Reservoir == "CCR", 
+         Site == 101) |> 
+    filter(Method == "Flowmate") %>%   #filter to just flowmate measurements 
+  mutate(Depth_m = Depth_cm/100,    
+         Velocity_m.s = ifelse(Velocity_unit %in% c("ft_s", "ft/s"), Velocity*0.3048, Velocity), 
+         Discharge = Depth_m * Velocity_m.s * WidthInterval_m    ) %>% 
+  group_by(Reservoir, Site, Date) %>% #group by site and date
+  summarise(Discharge_m3s = sum(Discharge, na.rm = T),  #sum across intervals to get final discharge
+         Method = "F") 
+
+
+left_join(ccr_flowmate, waterlevel_precip, by = "Date") |> 
+  ggplot(aes(x = Daily_waterlevel, y = Discharge_m3s)) +
+  geom_point()+stat_poly_line(method = "lm", linewidth = 2)+
+  stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
+               aes(x = Daily_waterlevel, y = Discharge_m3s, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
+  labs(x = "HPB water level (cm)", y = "Flowmate (m3s)")+
+  theme_bw()
+  
+  
+```
+
+
+
+
 
