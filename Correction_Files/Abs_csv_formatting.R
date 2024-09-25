@@ -5,19 +5,19 @@
 library(tidyverse)
 
 #set wd to folder of run date
-setwd("./Processed_Data/20240823_DH")
+setwd("./Processed_Data/20240923_DHET")
 
 
 #### read in data 
 #first need to rename columns of txt file and save as csv
-cdomall <- read.csv("./20240823_CDOMall.csv")
+cdomall <- read.csv("./CDOM_all_23SEP24.csv")
 
-run_date <- "20240823"
+run_date <- "20240923"
 
 
 ###Run for loop to make csvs
 
-for(i in colnames(cdomall)[2:15]) {
+for(i in colnames(cdomall)[2:14]) {
   
   # print(i)
   df <- cdomall |> 
