@@ -71,7 +71,7 @@ waterlevel_correct <- left_join(hobo_bind, ccr_met_bind, by = "DateTime_EST") |>
   mutate(waterlevel_cm = corrected_Pres_kPa * 10.1972)
 
 
-############### plot data ######################
+############### plot 10-min data ######################
 
 waterlevel_correct |> 
   ggplot()+
@@ -83,16 +83,17 @@ waterlevel_correct |>
   ggplot(aes(x = DateTime_EST, y = waterlevel_cm))+
   geom_line()
 
+############## compile daily data for well, dam, rain ######################
 
 ##precip plot 
 daily_rain <- ccr_met_git |> 
   filter(DateTime > ymd("2024-04-01")) |> 
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
-  summarise(Daily_rain = sum(Rain_Total_mm, na.rm = T))
+  summarise(Daily_rain_mm = sum(Rain_Total_mm, na.rm = T))
 
  daily_rain|> 
-  ggplot(aes(x = Date, y = Daily_rain))+
+  ggplot(aes(x = Date, y = Daily_rain_mm))+
   geom_point()+
   geom_line()
  
@@ -101,23 +102,17 @@ daily_rain <- ccr_met_git |>
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
   summarise(#pressure = mean(LvlPressure_psi_13, na.rm = T),
-            depth = mean(LvlDepth_m_13, na.rm = T)) |> 
-   left_join(daily_rain, by = "Date")
-
- daily_dam_waterlevel |> 
-   pivot_longer(-1) |> 
-   filter(Date > ymd("2024-08-01")) |> 
-  ggplot(aes(x = Date, y = value))+
-  geom_point()+
-   facet_wrap(~name, ncol = 1, scales = "free_y")
+            dam_depth_m = mean(LvlDepth_m_13, na.rm = T)) 
   
 #get daily water level and precip
 waterlevel_daily <- waterlevel_correct |> 
   mutate(Date = as.Date(DateTime_EST)) |> 
   group_by(Date) |> 
-  summarise(Daily_waterlevel = mean(waterlevel_cm, na.rm = T))
+  summarise(HPB_Daily_waterlevel_cm = mean(waterlevel_cm, na.rm = T))
 
 waterlevel_precip <-  left_join(daily_rain, waterlevel_daily, by = "Date")
+waterlevel_precip <-  left_join(waterlevel_precip, daily_dam_waterlevel, by = "Date")
+
 
 
 ```
@@ -166,12 +161,13 @@ Qdata_forjoin <- Qdata |>
 
 # 4 variable plot
 left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
-  rename(CCR_MetStation_daily_rain_mm = Daily_rain,
-         CCR_HPB_daily_waterlevel_cm = Daily_waterlevel,
+  rename(CCR_Dam_depth_m = dam_depth_m,
+         CCR_MetStation_daily_rain_mm = Daily_rain_mm,
+         CCR_HPB_daily_waterlevel_cm = HPB_Daily_waterlevel_cm,
          USGS_CatwabaCreek_dailyflow_cfs = Flow_02018500,
          USGS_TinkerCreek_dailyflow_cfs = Flow_02055100) |> 
   pivot_longer(-1) |> 
-  filter(Date > ymd("2024-06-15")) |> 
+  filter(Date > ymd("2024-04-15")) |> 
   ggplot(aes(x = Date, y = value))+
   geom_point()+
   #scale_y_log10()+
@@ -187,7 +183,7 @@ left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |>
 
 #USGS to HPB regression
 left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
-  rename(CCR_HPB_daily_waterlevel_cm = Daily_waterlevel,
+  rename(CCR_HPB_daily_waterlevel_cm = HPB_Daily_waterlevel_cm,
          USGS_CatwabaCreek_dailyflow_cfs = Flow_02018500,
          USGS_TinkerCreek_dailyflow_cfs = Flow_02055100) |> 
   filter(!is.na(CCR_HPB_daily_waterlevel_cm)) |> 
