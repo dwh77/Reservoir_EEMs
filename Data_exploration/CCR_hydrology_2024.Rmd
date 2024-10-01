@@ -37,15 +37,18 @@ ccr_met_bind <- ccr_met_git |>
   
 
 ### HOBO water level
-# hobo_22may24 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/HPB_waterlevel/hobo_hpb_22may24.csv", skip = 1)
+hpb_hobo_16sep24 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/HPB_waterlevel/hobo_hpb_16sep24.csv", skip = 1)
 
-hpb_hobo <- read_csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/HPB_waterlevel/hobo_hpb_16sep24.csv", skip = 1)
+hpb_hobo_30sep24 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/HPB_waterlevel/hobo_hpb_30sep24.csv", skip = 1)
+
+hpb_hobo <- rbind(hpb_hobo_16sep24, hpb_hobo_30sep24)
 
 #set time where sensor may have been out of the water
 maintenance <- c(seq(ymd_hms("2024-05-22 15:00:00"), ymd_hms("2024-05-22 16:00:00"), by = "10 min"),
                  seq(ymd_hms("2024-06-19 11:00:00"), ymd_hms("2024-06-19 12:20:00"), by = "10 min"),
                  seq(ymd_hms("2024-07-11 11:00:00"), ymd_hms("2024-07-11 12:00:00"), by = "10 min"),
-                 seq(ymd_hms("2024-09-16 13:00:00"), ymd_hms("2024-09-16 14:00:00"), by = "10 min")
+                 seq(ymd_hms("2024-09-16 13:00:00"), ymd_hms("2024-09-16 14:00:00"), by = "10 min"),
+                 seq(ymd_hms("2024-09-30 12:30:00"), ymd_hms("2024-09-30 14:00:00"), by = "10 min")
                  )
 
 hobo_bind <- hpb_hobo |> 
@@ -176,12 +179,14 @@ left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |>
   geom_vline(xintercept = ymd("2024-07-11"))+
   geom_vline(xintercept = ymd("2024-08-14"))+
   geom_vline(xintercept = ymd("2024-09-16"))+
+  geom_vline(xintercept = ymd("2024-09-30"))+
   facet_wrap(~name, ncol = 1, scales = "free_y")+
   labs(x= element_blank())+
   theme_bw()+ theme(text = element_text(size = 18))
 
 
-#USGS to HPB regression
+###USGS to HPB regression
+#Catawba
 left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
   rename(CCR_HPB_daily_waterlevel_cm = HPB_Daily_waterlevel_cm,
          USGS_CatwabaCreek_dailyflow_cfs = Flow_02018500,
@@ -192,6 +197,19 @@ left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |>
   stat_poly_line(method = "lm", linewidth = 2)+
   stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
                aes(x = USGS_CatwabaCreek_dailyflow_cfs, y = CCR_HPB_daily_waterlevel_cm, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
+  theme_bw()
+
+#Tinker
+left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
+  rename(CCR_HPB_daily_waterlevel_cm = HPB_Daily_waterlevel_cm,
+         USGS_CatwabaCreek_dailyflow_cfs = Flow_02018500,
+         USGS_TinkerCreek_dailyflow_cfs = Flow_02055100) |> 
+  filter(!is.na(CCR_HPB_daily_waterlevel_cm)) |> 
+  ggplot(aes(x = USGS_TinkerCreek_dailyflow_cfs, y = CCR_HPB_daily_waterlevel_cm))+
+  geom_point()+
+  stat_poly_line(method = "lm", linewidth = 2)+
+  stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
+               aes(x = USGS_TinkerCreek_dailyflow_cfs, y = CCR_HPB_daily_waterlevel_cm, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
   theme_bw()
   
 
@@ -221,10 +239,11 @@ ccr_flowmate <- raw_q |>
 
 
 left_join(ccr_flowmate, waterlevel_precip, by = "Date") |> 
-  ggplot(aes(x = Daily_waterlevel, y = Discharge_m3s)) +
+  mutate(month = month(Date)) |> 
+  ggplot(aes(x = HPB_Daily_waterlevel_cm, y = Discharge_m3s, color = month)) +
   geom_point()+stat_poly_line(method = "lm", linewidth = 2)+
   stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
-               aes(x = Daily_waterlevel, y = Discharge_m3s, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
+               aes(x = HPB_Daily_waterlevel_cm, y = Discharge_m3s, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
   labs(x = "HPB water level (cm)", y = "Flowmate (m3s)")+
   theme_bw()
   
