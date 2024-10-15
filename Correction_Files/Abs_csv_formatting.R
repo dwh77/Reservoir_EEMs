@@ -4,20 +4,21 @@
 # read in packages 
 library(tidyverse)
 
-#set wd to folder of run date
-setwd("./Processed_Data/20240923_DHET")
+#####set wd to folder of run date ######
+setwd("./Processed_Data/20241014_DHET")
 
 
 #### read in data 
 #first need to rename columns of txt file and save as csv
-cdomall <- read.csv("./CDOM_all_23SEP24.csv")
+cdomall <- read.csv("./CDOMall_20241014.csv")
 
-run_date <- "20240923"
+######### 
+run_date <- "20241014"
 
 
 ###Run for loop to make csvs
 
-for(i in colnames(cdomall)[2:14]) {
+for(i in colnames(cdomall)[2:16]) {
   
   # print(i)
   df <- cdomall |> 
