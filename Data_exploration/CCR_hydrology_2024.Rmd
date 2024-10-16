@@ -169,6 +169,7 @@ left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |>
          CCR_HPB_daily_waterlevel_cm = HPB_Daily_waterlevel_cm,
          USGS_CatwabaCreek_dailyflow_cfs = Flow_02018500,
          USGS_TinkerCreek_dailyflow_cfs = Flow_02055100) |> 
+  select(-USGS_CatwabaCreek_dailyflow_cfs) |> 
   pivot_longer(-1) |> 
   filter(Date > ymd("2024-04-15")) |> 
   ggplot(aes(x = Date, y = value))+
@@ -235,7 +236,8 @@ ccr_flowmate <- raw_q |>
          Discharge = Depth_m * Velocity_m.s * WidthInterval_m    ) %>% 
   group_by(Reservoir, Site, Date) %>% #group by site and date
   summarise(Discharge_m3s = sum(Discharge, na.rm = T),  #sum across intervals to get final discharge
-         Method = "F") 
+         Method = "F") |> 
+  mutate(L_s = Discharge_m3s * 1000)
 
 
 left_join(ccr_flowmate, waterlevel_precip, by = "Date") |> 
@@ -248,6 +250,30 @@ left_join(ccr_flowmate, waterlevel_precip, by = "Date") |>
   theme_bw()
   
   
+```
+
+S1 hysterisis 
+
+```{r}
+eems24 <- read.csv("../EEMs_Results_2024.csv")
+
+S1_eems <- eems24 |> 
+  mutate(Date = mdy(Date)) |> 
+  mutate(Date = ifelse(Date == ymd("2024-08-15"), ymd("2024-08-14"), Date)) |>
+  mutate(Date = as.Date(Date)) |> 
+  filter(Site == 101) |> 
+  group_by(Date) |> 
+  summarise(HIX = mean(HIX., na.rm = T))
+
+
+left_join(S1_eems, ccr_flowmate, by = "Date") |> 
+  ggplot(aes(y = HIX, x = L_s))+
+  geom_point(aes(color = as.factor(Date)), size = 5)+
+  geom_path()+
+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))+
+  labs(y = "HIX", x = "Q (L/s)", color = "Date")
+  
+
 ```
 
 

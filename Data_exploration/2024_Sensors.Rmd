@@ -27,13 +27,14 @@ Get YSI data
 
 ```{r}
 ## YSI data
-# ysi_gsheet <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1HbSBEFjMuK4Lxit5MRbATeiyljVAB-cpUNxO3dKd8V8/edit#gid=1787819257")
+ysi_gsheet <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1MX__IelyQBHO1bNxAltfYT_r_pJisMuiMtDG4oxkOok/edit?gid=1922496606#gid=1922496606")
 
-ysi_L1 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/YSI_PAR/ysi_L1.csv")
+# ysi_L1 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/YSI_PAR/ysi_L1.csv")
 
-ccr_ysi <- ysi_L1 |>
+ccr_ysi <- ysi_gsheet |>
   filter(Reservoir == "CCR") |>
-  mutate(Date = as.Date(DateTime)) |>
+  mutate(Date = mdy_hm(DateTime)) |>
+  mutate(Date = as.Date(Date)) |> 
   filter(year(Date) > 2023,
          !Date %in% c(ymd("2024-07-31"), ymd("2024-08-01")))
 
@@ -135,11 +136,21 @@ ccr_ctd_24 |>
 ## Bring CTD to YSI
 
 ```{r}
-## grab distances to bind in 
+## grab distances and site class to bind in 
 distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances.csv") |> 
   mutate(Date = mdy(Date)) |> 
   select(-c(13,14)) |> 
   pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft")
+
+site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class.csv") |> 
+  select(-X, -Key) |> 
+  mutate(Date = mdy(Date)) |> 
+  pivot_longer(-c(1), names_to = "Site_code", values_to = "Site_Class") |> 
+  mutate(Site_Class = ifelse(Site_Class %in% c("S", "S "), "Stream", Site_Class),
+         Site_Class = ifelse(Site_Class %in% c("P", "P "), "Pool", Site_Class),
+         Site_Class = ifelse(Site_Class == "C", "Cove", Site_Class),
+         Site_Class = ifelse(Site_Class == "L", "Pelagic", Site_Class))
+
 
 
 ##bind data together
@@ -180,16 +191,46 @@ sensors <- left_join(sensors_nodistance, distances, by = c("Site_code", "Date"))
     mutate(Distance = Distance_ft*0.3048,
          Dry_start = Dry_start*0.3048,
          Dry_end = Dry_end*0.3048) |> 
-  select(Reservoir, Site, Site_code, Date, Distance, Dry_start, Dry_end, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm ) |> 
   filter(Site != 50, #remove site 50 for EEMs comp
          Date > ymd("2024-04-23")) # remove S1 measurement from before sampling
+
+sensors <- left_join(sensors, site_class, by = c("Site_code", "Date")) |> 
+  select(Reservoir, Site, Site_code, Site_Class, Date, Distance, Dry_start, Dry_end, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm )
 
 
 ```
 
 
-## Dot plots - old style
 
+## Value on Y dot plots 
+
+```{r}
+### flipping so value is on y and color is depth
+sensors |> 
+  filter(Site_code != "C1") |> 
+  select(-DO_mgL, -DOsat_percent) |> 
+  pivot_longer(-c(1:9)) |> 
+  ggplot(aes(x = Distance, y = value, color = Depth_m, fill = Depth_m,
+             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
+  geom_point(size = 2)+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
+  facet_grid(name~Date, scales = "free_y")+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
+  labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
+  scale_color_gradient(high = "#CFCFCF", low = "black", breaks = c(3,6,9,12))+
+  scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
+
+
+```
+
+
+
+## Depth on Y dot plots - old style
+
+Site code on X
 ```{r}
 
 ##previous style plot
@@ -199,7 +240,7 @@ levels_sites_code <- c("S1", "S2", "P1", "P2", "C1", "C2", "C3", "C4", "50")
 #Variable on Y
 sensors |> 
   select(-DO_mgL) |> 
-  pivot_longer(-c(1:8)) |> 
+  pivot_longer(-c(1:9)) |> 
   mutate(Depth_m = ifelse(Depth_m == 1.1, 1, Depth_m),
          Depth_m = ifelse(Depth_m == 0.4, 0.5, Depth_m)) |> #just to make color gradient a lil cleaner
   #filter(Site > 50) |> #trim site 50 to help w/ viz
@@ -216,8 +257,8 @@ sensors |>
 
 #Depth on Y
 tempplot <- sensors |> 
-  select(1:8, Temp_C) |> 
-  pivot_longer(-c(1:8)) |> 
+  select(1:9, Temp_C) |> 
+  pivot_longer(-c(1:9)) |> 
   ggplot(aes(x = factor(Site_code, levels = levels_sites_code), y = Depth_m, color = value))+
   geom_point()+
   scale_y_reverse()+
@@ -227,8 +268,8 @@ tempplot <- sensors |>
   scale_color_gradient(high = "red", low = "blue") # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
 
 condplot <- sensors |> 
-  select(1:8, SpCond_uScm) |> 
-  pivot_longer(-c(1:8)) |> 
+  select(1:9, SpCond_uScm) |> 
+  pivot_longer(-c(1:9)) |> 
   ggplot(aes(x = factor(Site_code, levels = levels_sites_code), y = Depth_m, color = value))+
   geom_point()+
   scale_y_reverse()+
@@ -238,8 +279,8 @@ condplot <- sensors |>
   scale_color_gradient(high = "black", low = "#CFCFCF") # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
 
 doplot <- sensors |> 
-  select(1:8, DOsat_percent) |> 
-  pivot_longer(-c(1:8)) |> 
+  select(1:9, DOsat_percent) |> 
+  pivot_longer(-c(1:9)) |> 
   ggplot(aes(x = factor(Site_code, levels = levels_sites_code), y = Depth_m, color = value))+
   geom_point()+
   scale_y_reverse()+
@@ -256,10 +297,10 @@ ggarrange(tempplot , condplot , doplot, ncol = 1)
 Distance on x 
 
 ```{r}
-#Depth on Y
+#value on Y
 tempplot <- sensors |> 
-  select(1:8, Temp_C) |> 
-  pivot_longer(-c(1:8)) |> 
+  select(1:9, Temp_C) |> 
+  pivot_longer(-c(1:9)) |> 
   ggplot(aes(x = Distance, y = Depth_m, color = value))+
   geom_point()+
   scale_y_reverse()+
@@ -271,8 +312,8 @@ tempplot <- sensors |>
   scale_color_gradient(high = "red", low = "blue") # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
 
 condplot <- sensors |> 
-  select(1:8, SpCond_uScm) |> 
-  pivot_longer(-c(1:8)) |> 
+  select(1:9, SpCond_uScm) |> 
+  pivot_longer(-c(1:9)) |> 
   ggplot(aes(x = Distance, y = Depth_m, color = value))+
   geom_point()+
   scale_y_reverse()+
@@ -284,8 +325,8 @@ condplot <- sensors |>
   scale_color_gradient(high = "black", low = "#CFCFCF") # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
 
 doplot <- sensors |> 
-  select(1:8, DOsat_percent) |> 
-  pivot_longer(-c(1:8)) |> 
+  select(1:9, DOsat_percent) |> 
+  pivot_longer(-c(1:9)) |> 
   ggplot(aes(x = Distance, y = Depth_m, color = value))+
   geom_point()+
   scale_y_reverse()+
@@ -298,23 +339,7 @@ doplot <- sensors |>
 
 ggarrange(tempplot , condplot , doplot, ncol = 1)
 
-
-### flipping so value is on y and color is depth
-sensors |> 
-  select(-DO_mgL) |> 
-  pivot_longer(-c(1:8)) |> 
-  ggplot(aes(x = Distance, y = value, color = Depth_m))+
-  geom_point()+
-  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = 10, ymax = 12), 
-            alpha = 0.1, fill = "blue" )+
-  facet_grid(name~Date, scales = "free_y")+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
-  labs(x= "Distance (m)")+
-  scale_color_gradient(high = "black", low = "#CFCFCF", , breaks = c(3,6,9,12)) # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
-
 ```
-
-
 
 
 
@@ -673,8 +698,6 @@ ggplot(interp_temp, aes(x=DateTime, y=y))+
 
 ```
 
-
-
 Heatmaps Distance
 
 ```{r}
@@ -791,6 +814,7 @@ noon1/sunset/midnight/sunrise/noon2
 ```
 
 Cond heatmaps 
+
 ```{r}
 #### Noon 1
 fp_new <- ccr_MSN_grouped |>   filter(SunTime == 'Noon 1', !is.na(SpCond_uScm)) 
