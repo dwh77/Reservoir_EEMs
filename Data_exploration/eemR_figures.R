@@ -7,7 +7,7 @@ pacman::p_load(ggplot2,tidyverse,lattice,ggpubr,eemR,htmltools, staRdom)
 
 ###############################################################################
 ## Load in files
-file <- "./Processed_Data/20240822_DH/20240822_CC4_15aug24_15r1.csv"
+file <- "./Processed_Data/20240822_DH/20240822_CS1_15aug24_01r1.csv"
 eem <- eem_read(file, recursive = TRUE, import_function = eem_csv)
 
 ## Load in blank
