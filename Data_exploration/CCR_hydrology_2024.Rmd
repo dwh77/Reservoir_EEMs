@@ -18,7 +18,18 @@ library(ggpmisc) #stat poly line
 ########### get data ###############
 
 ### CCR dam for water level
+ccr_dam_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/2/ea78dd541e089687af1f4c4b550bc9ca")
 ccr_dam_git <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/refs/heads/ccre-dam-data-qaqc/ccre-waterquality_L1.csv") 
+
+rbind(ccr_dam_edi, ccr_dam_git) |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  group_by(Date) |> 
+  summarise(#pressure = mean(LvlPressure_psi_13, na.rm = T),
+            dam_depth_m = mean(LvlDepth_m_13, na.rm = T)) |> 
+  mutate(Year = year(Date), Month = month(Date), Day = day(Date),
+         FakeDate = ymd(paste(2032, Month, Day, sep = "-"))) |> 
+  ggplot(aes(x = FakeDate, y = dam_depth_m, color = as.factor(Year)))+
+    geom_line(linewidth = 2) + scale_x_date(date_labels = "%b") + theme_bw()
 
 ### CCR met 
 #ccr_met_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1105/2/5c9281623ab7676ca1be85ee1761bf28")
