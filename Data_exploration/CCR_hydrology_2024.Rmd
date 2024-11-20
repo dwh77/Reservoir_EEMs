@@ -194,7 +194,8 @@ left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |>
   geom_vline(xintercept = ymd("2024-09-16"))+
   geom_vline(xintercept = ymd("2024-09-30"))+
   geom_vline(xintercept = ymd("2024-10-28"))+
-  facet_wrap(~name, ncol = 1, scales = "free_y")+
+  facet_wrap(~factor(name, levels = c("CCR_MetStation_daily_rain_mm", "CCR_HPB_daily_waterlevel_cm", "USGS_TinkerCreek_dailyflow_cfs", "CCR_Dam_depth_m")), ncol = 1, scales = "free_y")+
+  scale_x_date(breaks = "2 months", date_labels = "%b %y")+
   labs(x= element_blank())+
   theme_bw()+ theme(text = element_text(size = 18))
 
@@ -268,6 +269,7 @@ left_join(ccr_flowmate, waterlevel_precip, by = "Date") |>
 S1 hysterisis 
 
 ```{r}
+## EEMS
 eems24 <- read.csv("../EEMs_Results_2024.csv")
 
 S1_eems <- eems24 |> 
@@ -276,7 +278,8 @@ S1_eems <- eems24 |>
   mutate(Date = as.Date(Date)) |> 
   filter(Site == 101) |> 
   group_by(Date) |> 
-  summarise(HIX = mean(HIX., na.rm = T))
+  summarise(HIX = mean(HIX., na.rm = T),
+            BIX = mean(BIX., na.rm = T))
 
 
 left_join(S1_eems, ccr_flowmate, by = "Date") |> 
@@ -285,6 +288,35 @@ left_join(S1_eems, ccr_flowmate, by = "Date") |>
   geom_path()+
   theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))+
   labs(y = "HIX", x = "Q (L/s)", color = "Date")
+
+
+##Solubles 
+ccr_solubles <- read.csv("./solubles1_v2.csv") |> 
+  mutate(NO3 = ifelse(NO3 < 0, 0, NO3),
+         NH4 = ifelse(NH4 < 0, 0, NH4),
+         PO4 = ifelse(PO4 < 0, 0, PO4)) |> 
+  mutate(Date = mdy(Date)) |> 
+  mutate(Site_code = ifelse(Date == ymd("2024-05-22") & Site_code == "CC4", "CC3", Site_code),
+         Site_code = ifelse(Date == ymd("2024-05-22") & Site_code == "CC5", "CC4", Site_code)) |> 
+  mutate(Site_code = substr(Site_code, 2, nchar(Site_code))) |> 
+  mutate(Site_code = ifelse(Site_code =="50", "C50", Site_code)) |> 
+  mutate(Date = ifelse(Date == ymd("2024-08-15"), ymd("2024-08-14"), Date),
+         Date = as.Date(Date)) |> 
+  rename(DOC = 10)
+
+S1_solubles <- ccr_solubles |> 
+  filter(Site_number == 101) |> 
+  group_by(Date) |> 
+  summarise(DOC = mean(DOC, na.rm = T), NO3 = mean(NO3, na.rm = T), PO4 = mean(PO4, na.rm = T), NH4 = mean(NH4, na.rm = T)) |> 
+  left_join(S1_eems, by = "Date") |> 
+  pivot_longer(-1)
+
+left_join(S1_solubles, ccr_flowmate, by = "Date") |> 
+  ggplot(aes(y = value, x = L_s))+  
+  geom_point(aes(color = as.factor(Date)), size = 5)+
+  facet_wrap(~name, scales = "free_y")+
+  geom_path()+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))+
+  labs(y = "value", x = "Q (L/s)", color = "Date")
   
 
 ```
