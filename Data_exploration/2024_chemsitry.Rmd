@@ -16,6 +16,166 @@ library(tidyverse)
 
 ```
 
+## Read in A lab chem
+
+Bind data from instrument and make a csv that I can edit the BOT depths 
+
+```{r}
+
+Site_code_number <- data.frame(Site_code = c("CS1", "CS2", "CP1", "CP2", "CC1", "CC2", "CC3", "CC4", "C50"),
+                               Site_number = c(101, 100, 98, 96, 94, 92, 90, 88, 50))
+# 
+# doc1 <- read.csv("C:/Users/dwh18/OneDrive/Desktop/Alab_QAQC/2024/CCR_solubles1/ccr_doc1.csv")
+# sol1 <- read.csv("C:/Users/dwh18/OneDrive/Desktop/Alab_QAQC/2024/CCR_solubles1/ccr_solubles1.csv")
+# 
+# solubles <- full_join(doc1, sol1, by = c("Sample_ID" = "Sample_Names"))
+# 
+# names <- solubles |> 
+#   select(Sample_ID) |> 
+#   # mutate(Name = substr(SampleName, 10, nchar(SampleName)),   #get rid of yyyymmdd_ at start       
+#   #        Name = str_sub(Name, 1, str_length(Name)-4)) |> #remove .csv from end
+#   # mutate(Name = sapply(Name, add_underscore)) |>  # add underscore between depth and rep
+#     mutate(Name = Sample_ID) |> 
+#   separate(Name, into = paste0("part", 1:4), sep = "_", fill = "right") |> #break Name into four columns
+#   rename(Site_code = part1,
+#          Date = part2,
+#          Depth = part3,
+#          Rep = part4) |>  #give columns meaningful names
+#   mutate(Rep = ifelse(Rep %in% c("r1", "R1"), 1, 2)) |> #update rep values 
+#   mutate(Depth_m = ifelse(Depth %in% c("0.1m"), "0.1", NA),
+#          Depth_m = ifelse(Depth %in% c("1.5m"), "1.5", Depth_m),
+#          Depth_m = ifelse(Depth %in% c("6m"), "6", Depth_m),
+#          Depth_m = ifelse(Depth %in% c("9m"), "9", Depth_m),
+#          Depth_m = ifelse(Depth %in% c("BOT"), "BOT", Depth_m)) |>  #update depths that are easy, will assign BOT manually later
+#   mutate(Date = dmy(Date),
+#          Reservoir = "CCR") |> 
+#   left_join(Site_code_number, by = "Site_code") |> 
+#   select(Reservoir, Site_code, Site_number, Depth_m, Date, Rep, Sample_ID)
+# 
+# # unique(names$Depth)
+# 
+# solublesA <- left_join(names, solubles, by = "Sample_ID")
+# 
+# write.csv(solublesA, "./solubles1_v1.csv", row.names = F)
+
+ccr_solubles <- read.csv("./solubles1_v2.csv") |> 
+  mutate(NO3 = ifelse(NO3 < 0, 0, NO3),
+         NH4 = ifelse(NH4 < 0, 0, NH4),
+         PO4 = ifelse(PO4 < 0, 0, PO4)) |> 
+  mutate(Date = mdy(Date)) |> 
+  mutate(Site_code = ifelse(Date == ymd("2024-05-22") & Site_code == "CC4", "CC3", Site_code),
+         Site_code = ifelse(Date == ymd("2024-05-22") & Site_code == "CC5", "CC4", Site_code)) |> 
+  mutate(Site_code = substr(Site_code, 2, nchar(Site_code))) |> 
+  mutate(Site_code = ifelse(Site_code =="50", "C50", Site_code)) |> 
+  mutate(Date = ifelse(Date == ymd("2024-08-15"), ymd("2024-08-14"), Date),
+         Date = as.Date(Date)) 
+
+  
+
+solubles_plotting <- left_join(ccr_solubles, distances, by = c("Site_code", "Date")) |> 
+  left_join(site_class, by = c("Site_code", "Date")) |> 
+  mutate(Distance = Distance_ft*0.3048,
+         Dry_start = Dry_start*0.3048,
+         Dry_end = Dry_end*0.3048) |> 
+  filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
+  rename(DOC = 10,
+         Site = Site_number) |> 
+  select(Reservoir, Site, Site_code, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, DOC, NO3, NH4, PO4 )
+
+
+```
+
+plot it! 
+
+```{r}
+#summarize
+## something going wrong in here
+solubles_summary <- solubles_plotting |>
+  select(Site, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, DOC, NO3, NH4, PO4) |>
+  group_by(Site, Site_Class, Depth_m, Date, Dry_start, Dry_end, Distance) |>
+  summarise(DOC_mean = mean(DOC, na.rm = T),
+            DOC_min = min(DOC, na.rm = T),
+            DOC_max = max(DOC, na.rm = T),
+            PO4_mean = mean(PO4, na.rm = T),
+            PO4_min = min(PO4, na.rm = T),
+            PO4_max = max(PO4, na.rm = T),
+            NH4_mean = mean(NH4, na.rm = T),
+            NH4_min = min(NH4, na.rm = T),
+            NH4_max = max(NH4, na.rm = T),
+            NO3_mean = mean(NO3, na.rm = T),
+            NO3_min = min(NO3, na.rm = T),
+            NO3_max = max(NO3, na.rm = T)
+                        ) |>
+  mutate(Rep = ifelse(DOC_mean != DOC_min, "Y", "N"))
+
+
+#### PLOT
+
+##DOC
+solubles_summary |> 
+  filter(!Site == 50) |> 
+  ggplot(aes(x = Distance, y = DOC_mean, color = Depth_m, fill = Depth_m,
+             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
+  geom_point() + 
+  geom_errorbar(aes(ymin = DOC_min, ymax = DOC_max), width = 2) +
+  facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), alpha = 0.01, fill = "gray", color = NA )+ 
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
+    labs(x= "Distance from Stream (m)",  shape = "Site Type")+
+  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
+  scale_color_gradient(high = "#CFCFCF", low = "black", breaks = c(3,6,9,12))+  scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) 
+
+
+##PO4
+solubles_summary |> 
+  filter(!Site == 50) |> 
+  ggplot(aes(x = Distance, y = PO4_mean, color = Depth_m, fill = Depth_m,
+             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
+  geom_point() + 
+  geom_errorbar(aes(ymin = PO4_min, ymax = PO4_max), width = 2) +
+  facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), alpha = 0.01, fill = "gray", color = NA )+ 
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
+    labs(x= "Distance from Stream (m)",  shape = "Site Type")+
+  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
+  scale_color_gradient(high = "#CFCFCF", low = "black", breaks = c(3,6,9,12))+  scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) 
+
+
+##NO3
+solubles_summary |> 
+  filter(!Site == 50) |> 
+  ggplot(aes(x = Distance, y = NO3_mean, color = Depth_m, fill = Depth_m,
+             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
+  geom_point() + 
+  geom_errorbar(aes(ymin = NO3_min, ymax = NO3_max), width = 2) +
+  facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), alpha = 0.01, fill = "gray", color = NA )+ 
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
+    labs(x= "Distance from Stream (m)",  shape = "Site Type")+
+  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
+  scale_color_gradient(high = "#CFCFCF", low = "black", breaks = c(3,6,9,12))+  scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) 
+
+
+##NH4
+solubles_summary |> 
+  filter(!Site == 50) |> 
+  ggplot(aes(x = Distance, y = NH4_mean, color = Depth_m, fill = Depth_m,
+             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
+  geom_point() + 
+  geom_errorbar(aes(ymin = NH4_min, ymax = NH4_max), width = 2) +
+  facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), alpha = 0.01, fill = "gray", color = NA )+ 
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
+    labs(x= "Distance from Stream (m)",  shape = "Site Type")+
+  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
+  scale_color_gradient(high = "#CFCFCF", low = "black", breaks = c(3,6,9,12))+  scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) 
+
+
+
+
+```
+
+
 
 ## Read in EEMs
 
@@ -23,12 +183,12 @@ Get EEM data
 
 ```{r}
 ## bring in distances and site class table from google sheets; have to redownload locally each time 
-distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances.csv") |> 
+distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances (1).csv") |> 
   mutate(Date = mdy(Date)) |> 
   select(-c(13,14)) |> 
   pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft")
 
-site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class.csv") |> 
+site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class (1).csv") |> 
   select(-X, -Key) |> 
   mutate(Date = mdy(Date)) |> 
   pivot_longer(-c(1), names_to = "Site_code", values_to = "Site_Class") |> 
@@ -143,8 +303,7 @@ eems_summary |>
              shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
   geom_point() + 
   geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
-  facet_wrap(~Date, nrow = 4)+
-  facet_wrap(~Date, scales = "fixed", ncol = 6)+ 
+  facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
             alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
   ylim(1.45,14.4)+
@@ -162,8 +321,7 @@ eems_summary |>
              shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
   geom_point() + 
   geom_errorbar(aes(ymin = BIX_min, ymax = BIX_max), width = 2) +
-  facet_wrap(~Date, nrow = 4)+
-  facet_wrap(~Date, scales = "fixed", ncol = 6)+ 
+  facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
             alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
   ylim(0.51, 0.89)+
