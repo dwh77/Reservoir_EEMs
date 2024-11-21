@@ -224,7 +224,7 @@ eems <- eems24 |>
          Site_code = ifelse(Site == 92, "C2", Site_code),
          Site_code = ifelse(Site == 90, "C3", Site_code),
          Site_code = ifelse(Site == 88, "C4", Site_code),
-         Site_code = ifelse(Site == 50, "50", Site_code)
+         Site_code = ifelse(Site == 50, "C50", Site_code)
          ) |> 
   select(Reservoir, Site, Site_code, Depth_m, Date, FI., HIX., BIX., T., A., A.T., a254, a350, A254, A350, NOTES)
 
