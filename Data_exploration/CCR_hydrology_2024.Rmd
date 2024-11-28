@@ -257,7 +257,7 @@ ccr_flowmate <- raw_q |>
 left_join(ccr_flowmate, waterlevel_precip, by = "Date") |> 
   mutate(month = month(Date)) |> 
   ggplot(aes(x = HPB_Daily_waterlevel_cm, y = L_s, color = month)) +
-  geom_point()+stat_poly_line(method = "lm", linewidth = 2)+
+  geom_point() +stat_poly_line(method = "lm", linewidth = 2)+
   stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
                aes(x = HPB_Daily_waterlevel_cm, y = L_s, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
   labs(x = "HPB water level (cm)", y = "Flowmate (m3s)")+
@@ -291,7 +291,11 @@ left_join(S1_eems, ccr_flowmate, by = "Date") |>
 
 
 ##Solubles 
-ccr_solubles <- read.csv("./solubles1_v2.csv") |> 
+ccr_solubles1 <- read.csv("./solubles1_v2.csv")
+ccr_solubles2 <- read.csv("./solubles2_v2.csv") |> 
+  rename(NH4 = 14, PO4 = 15, NO3 = 16)
+
+ccr_solubles <- rbind(ccr_solubles1, ccr_solubles2) |> 
   mutate(NO3 = ifelse(NO3 < 0, 0, NO3),
          NH4 = ifelse(NH4 < 0, 0, NH4),
          PO4 = ifelse(PO4 < 0, 0, PO4)) |> 
