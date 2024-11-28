@@ -18,13 +18,14 @@ library(tidyverse)
 
 ## Read in A lab chem
 
-Bind data from instrument and make a csv that I can edit the BOT depths 
+Clean up data
 
 ```{r}
-
 Site_code_number <- data.frame(Site_code = c("CS1", "CS2", "CP1", "CP2", "CC1", "CC2", "CC3", "CC4", "C50"),
                                Site_number = c(101, 100, 98, 96, 94, 92, 90, 88, 50))
 # 
+#### RUN 1 ####
+
 # doc1 <- read.csv("C:/Users/dwh18/OneDrive/Desktop/Alab_QAQC/2024/CCR_solubles1/ccr_doc1.csv")
 # sol1 <- read.csv("C:/Users/dwh18/OneDrive/Desktop/Alab_QAQC/2024/CCR_solubles1/ccr_solubles1.csv")
 # 
@@ -58,7 +59,57 @@ Site_code_number <- data.frame(Site_code = c("CS1", "CS2", "CP1", "CP2", "CC1", 
 # 
 # write.csv(solublesA, "./solubles1_v1.csv", row.names = F)
 
-ccr_solubles <- read.csv("./solubles1_v2.csv") |> 
+
+#### RUN 2 ####
+# doc2 <- read.csv("C:/Users/dwh18/OneDrive/Desktop/Alab_QAQC/2024/CCR_LTREB_solubles2/TOC/ccr_doc2.csv")|>
+#   filter(!Sample_ID %in% c("", "sampleID", "SampleID"))
+# 
+# lachat2 <- read.csv("C:/Users/dwh18/OneDrive/Desktop/Alab_QAQC/2024/CCR_LTREB_solubles2/Lachat_14nov24_solubles/ccr_solubles2.csv")|>
+#   filter(!sample_name %in% c(""))
+# 
+# solubles2 <- full_join(doc2, lachat2, by = c("Sample_ID" = "sample_name"))
+# 
+# names2 <- solubles2 |>
+#   select(Sample_ID) |>
+#   # mutate(Name = substr(SampleName, 10, nchar(SampleName)),   #get rid of yyyymmdd_ at start
+#   #        Name = str_sub(Name, 1, str_length(Name)-4)) |> #remove .csv from end
+#   # mutate(Name = sapply(Name, add_underscore)) |>  # add underscore between depth and rep
+#     mutate(Name = Sample_ID) |>
+#   separate(Name, into = paste0("part", 1:4), sep = "_", fill = "right") |> #break Name into four columns
+#   rename(Site_code = part1,
+#          Date = part2,
+#          Depth = part3,
+#          Rep = part4) |>  #give columns meaningful names
+#   mutate(Rep = ifelse(Rep %in% c("r1", "R1"), 1, 2)) |> #update rep values
+#   mutate(Depth_m = ifelse(Depth %in% c("0.1m"), "0.1", NA),
+#          Depth_m = ifelse(Depth %in% c("1.5m"), "1.5", Depth_m),
+#          Depth_m = ifelse(Depth %in% c("6m"), "6", Depth_m),
+#          Depth_m = ifelse(Depth %in% c("9m"), "9", Depth_m),
+#          Depth_m = ifelse(Depth %in% c("20m"), "20", Depth_m),
+#          Depth_m = ifelse(Depth %in% c("BOT"), "BOT", Depth_m)) |>  #update depths that are easy, will assign BOT manually later
+#   mutate(Date = dmy(Date),
+#          Reservoir = "CCR") |>
+#   left_join(Site_code_number, by = "Site_code") |>
+#   select(Reservoir, Site_code, Site_number, Depth_m, Date, Rep, Sample_ID)
+# 
+# solublesA2 <- left_join(names2, solubles2, by = "Sample_ID")
+# 
+# write.csv(solublesA2, "./solubles2_v1.csv", row.names = F)
+
+
+
+```
+
+
+Bind data from instrument and make a csv that I can edit the BOT depths 
+
+```{r}
+
+ccr_solubles1 <- read.csv("./solubles1_v2.csv")
+ccr_solubles2 <- read.csv("./solubles2_v2.csv") |> 
+  rename(NH4 = 14, PO4 = 15, NO3 = 16)
+
+ccr_solubles <- rbind(ccr_solubles1, ccr_solubles2)|> 
   mutate(NO3 = ifelse(NO3 < 0, 0, NO3),
          NH4 = ifelse(NH4 < 0, 0, NH4),
          PO4 = ifelse(PO4 < 0, 0, PO4)) |> 
@@ -109,11 +160,23 @@ solubles_summary <- solubles_plotting |>
   mutate(Rep = ifelse(DOC_mean != DOC_min, "Y", "N"))
 
 
+#### Rep check
+solubles_summary |> 
+  filter(Rep == "Y") |> ggplot(aes(y = Depth_m, x= DOC_mean))+
+  geom_point(size = 1) +    geom_errorbar(aes(xmin = DOC_min, xmax = DOC_max),    width = 2 )+
+  facet_grid(Site~Date) + labs(title = "DOC reps")
+
+solubles_summary |> 
+  filter(Rep == "Y") |> ggplot(aes(y = Depth_m, x= PO4_mean))+
+  geom_point(size = 1) +    geom_errorbar(aes(xmin = PO4_min, xmax = PO4_max),    width = 2 )+
+  facet_grid(Site~Date) + labs(title = "PO4 reps")
+
+
 #### PLOT
 
 ##DOC
 solubles_summary |> 
-  filter(!Site == 50) |> 
+  #filter(!Site == 50) |> 
   ggplot(aes(x = Distance, y = DOC_mean, color = Depth_m, fill = Depth_m,
              shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
   geom_point() + 
@@ -121,14 +184,14 @@ solubles_summary |>
   facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), alpha = 0.01, fill = "gray", color = NA )+ 
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
-    labs(x= "Distance from Stream (m)",  shape = "Site Type")+
+    labs(y = "DOC (mg/L)", x= "Distance from Stream (m)",  shape = "Site Type")+
   scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
   scale_color_gradient(high = "#CFCFCF", low = "black", breaks = c(3,6,9,12))+  scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) 
 
 
 ##PO4
 solubles_summary |> 
-  filter(!Site == 50) |> 
+  #filter(!Site == 50) |> 
   ggplot(aes(x = Distance, y = PO4_mean, color = Depth_m, fill = Depth_m,
              shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
   geom_point() + 
@@ -136,14 +199,14 @@ solubles_summary |>
   facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), alpha = 0.01, fill = "gray", color = NA )+ 
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
-    labs(x= "Distance from Stream (m)",  shape = "Site Type")+
+    labs(y = "PO4 (ug/L)", x= "Distance from Stream (m)",  shape = "Site Type")+
   scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
   scale_color_gradient(high = "#CFCFCF", low = "black", breaks = c(3,6,9,12))+  scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) 
 
 
 ##NO3
 solubles_summary |> 
-  filter(!Site == 50) |> 
+  #filter(!Site == 50) |> 
   ggplot(aes(x = Distance, y = NO3_mean, color = Depth_m, fill = Depth_m,
              shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
   geom_point() + 
@@ -151,14 +214,14 @@ solubles_summary |>
   facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), alpha = 0.01, fill = "gray", color = NA )+ 
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
-    labs(x= "Distance from Stream (m)",  shape = "Site Type")+
+    labs(y = "NO3 (ug/L)", x= "Distance from Stream (m)",  shape = "Site Type")+
   scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
   scale_color_gradient(high = "#CFCFCF", low = "black", breaks = c(3,6,9,12))+  scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) 
 
 
 ##NH4
 solubles_summary |> 
-  filter(!Site == 50) |> 
+  #filter(!Site == 50) |> 
   ggplot(aes(x = Distance, y = NH4_mean, color = Depth_m, fill = Depth_m,
              shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
   geom_point() + 
@@ -166,11 +229,26 @@ solubles_summary |>
   facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), alpha = 0.01, fill = "gray", color = NA )+ 
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
-    labs(x= "Distance from Stream (m)",  shape = "Site Type")+
+    labs(y = "NH4 (ug/L)", x= "Distance from Stream (m)",  shape = "Site Type")+
   scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
   scale_color_gradient(high = "#CFCFCF", low = "black", breaks = c(3,6,9,12))+  scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) 
 
 
+
+# ##trying virdis
+# solubles_summary |> 
+#   #filter(!Site == 50) |> 
+#   ggplot(aes(x = Distance, y = DOC_mean, fill = Depth_m, #fill = Depth_m,
+#              shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
+#   geom_point() + 
+#   geom_errorbar(aes(ymin = DOC_min, ymax = DOC_max), width = 2) +
+#   facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
+#   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), alpha = 0.01, fill = "gray", color = NA )+ 
+#   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
+#     labs(x= "Distance from Stream (m)",  shape = "Site Type")+
+#   scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
+#   scale_fill_viridis_c(breaks = c(3,6,9,12, 15,18))
+#   scale_color_gradient(high = "#CFCFCF", low = "black", breaks = c(3,6,9,12))+  scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) 
 
 
 ```

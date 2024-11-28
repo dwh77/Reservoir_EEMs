@@ -137,12 +137,12 @@ ccr_ctd_24 |>
 
 ```{r}
 ## grab distances and site class to bind in 
-distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances.csv") |> 
+distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances (1).csv") |> 
   mutate(Date = mdy(Date)) |> 
   select(-c(13,14)) |> 
   pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft")
 
-site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class.csv") |> 
+site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class (1).csv") |> 
   select(-X, -Key) |> 
   mutate(Date = mdy(Date)) |> 
   pivot_longer(-c(1), names_to = "Site_code", values_to = "Site_Class") |> 
@@ -182,7 +182,7 @@ sensors_nodistance <- rbind(ctd_bind, ysi_bind) |>
          Site_code = ifelse(Site == 92, "C2", Site_code),
          Site_code = ifelse(Site == 90, "C3", Site_code),
          Site_code = ifelse(Site == 88, "C4", Site_code),
-         Site_code = ifelse(Site == 50, "50", Site_code)
+         Site_code = ifelse(Site == 50, "C50", Site_code)
          ) |> 
   select(Reservoir, Site, Site_code, Date, Depth_m, everything())
 
@@ -191,7 +191,7 @@ sensors <- left_join(sensors_nodistance, distances, by = c("Site_code", "Date"))
     mutate(Distance = Distance_ft*0.3048,
          Dry_start = Dry_start*0.3048,
          Dry_end = Dry_end*0.3048) |> 
-  filter(Site != 50, #remove site 50 for EEMs comp
+  filter(#Site != 50, #remove site 50 for EEMs comp
          Date > ymd("2024-04-23")) # remove S1 measurement from before sampling
 
 sensors <- left_join(sensors, site_class, by = c("Site_code", "Date")) |> 
@@ -208,7 +208,7 @@ sensors <- left_join(sensors, site_class, by = c("Site_code", "Date")) |>
 ### flipping so value is on y and color is depth
 sensors |> 
   filter(Site_code != "C1") |> 
-  select(-DO_mgL, -DOsat_percent) |> 
+  select(-DO_mgL) |> 
   pivot_longer(-c(1:9)) |> 
   ggplot(aes(x = Distance, y = value, color = Depth_m, fill = Depth_m,
              shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
@@ -219,6 +219,7 @@ sensors |>
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
   labs(x= "Distance from Stream (m)",
        shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
   scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
   scale_color_gradient(high = "#CFCFCF", low = "black", breaks = c(3,6,9,12))+
   scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
