@@ -48,11 +48,13 @@ ccr_met_bind <- ccr_met_git |>
   
 
 ### HOBO water level
-hpb_hobo_16sep24 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/HPB_waterlevel/hobo_hpb_16sep24.csv", skip = 1)
+hpb_hobo_16sep24 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/HPB_waterlevel/hobo_hpb_16sep24.csv", skip = 1) |> 
+  select(2:4)
 
-hpb_hobo_28oct24 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/HPB_waterlevel/hobo_hpb_28oct24.csv", skip = 1)
+hpb_hobo_17dec24 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/HPB_waterlevel/hobo_hpb_17dec24_2.csv", skip = 1) |> 
+  select(2:4)
 
-hpb_hobo <- rbind(hpb_hobo_16sep24, hpb_hobo_28oct24)
+hpb_hobo <- rbind(hpb_hobo_16sep24, hpb_hobo_17dec24)
 
 #set time where sensor may have been out of the water
 maintenance <- c(seq(ymd_hms("2024-05-22 15:00:00"), ymd_hms("2024-05-22 16:00:00"), by = "10 min"),
@@ -60,14 +62,15 @@ maintenance <- c(seq(ymd_hms("2024-05-22 15:00:00"), ymd_hms("2024-05-22 16:00:0
                  seq(ymd_hms("2024-07-11 11:00:00"), ymd_hms("2024-07-11 12:00:00"), by = "10 min"),
                  seq(ymd_hms("2024-09-16 13:00:00"), ymd_hms("2024-09-16 14:00:00"), by = "10 min"),
                  seq(ymd_hms("2024-09-30 12:30:00"), ymd_hms("2024-09-30 14:00:00"), by = "10 min"),
-                 seq(ymd_hms("2024-10-28 13:00:00"), ymd_hms("2024-10-28 14:00:00"), by = "10 min")
+                 seq(ymd_hms("2024-10-28 13:00:00"), ymd_hms("2024-10-28 14:00:00"), by = "10 min"),
+                 seq(ymd_hms("2024-12-17 13:30:00"), ymd_hms("2024-12-17 14:00:00"), by = "10 min")
                  )
 
 hobo_bind <- hpb_hobo |> 
-  rename(DateTime_EDT = 2, 
-         HOBO_Abs_Pres_kPa = 3,
-         Temp_C = 4) |> 
-  select(DateTime_EDT, HOBO_Abs_Pres_kPa, Temp_C) |> 
+  rename(DateTime_EDT = 1, 
+         HOBO_Abs_Pres_kPa = 2,
+         Temp_C = 3) |> 
+  #select(DateTime_EDT, HOBO_Abs_Pres_kPa, Temp_C) |> 
   mutate(DateTime_EDT = mdy_hms(DateTime_EDT)) |> 
   filter(!DateTime_EDT %in% maintenance) |> 
   mutate(Date = as.Date(DateTime_EDT),
@@ -78,6 +81,9 @@ hobo_bind <- hpb_hobo |>
   select(DateTime_EST, HOBO_Abs_Pres_kPa, Temp_C) 
 
 
+
+
+
 ############## bind data and calculate water level #######################
 
 waterlevel_correct <- left_join(hobo_bind, ccr_met_bind, by = "DateTime_EST") |> 
@@ -85,6 +91,21 @@ waterlevel_correct <- left_join(hobo_bind, ccr_met_bind, by = "DateTime_EST") |>
   mutate(corrected_Pres_kPa = HOBO_Abs_Pres_kPa - BP_Average_kPa) |> 
   mutate(waterlevel_cm = corrected_Pres_kPa * 10.1972)
 
+#stream temp hysteresis
+waterlevel_correct |> 
+  ggplot(aes(x = waterlevel_cm, y = Temp_C, color = DateTime_EST))+
+  geom_point()+
+  theme_bw() + labs(title = "10 min data")
+
+
+waterlevel_correct |> 
+  mutate(Date = as.Date(DateTime_EST)) |> 
+  group_by(Date) |> 
+  summarise(stage = mean(waterlevel_cm, na.rm = T),
+            temp = mean(Temp_C, na.rm = T)) |> 
+  ggplot(aes(x = stage, y = temp, color = Date))+
+  geom_point()+
+  theme_bw() + labs(title = "Daily")
 
 ############### plot 10-min data ######################
 
@@ -194,6 +215,7 @@ left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |>
   geom_vline(xintercept = ymd("2024-09-16"))+
   geom_vline(xintercept = ymd("2024-09-30"))+
   geom_vline(xintercept = ymd("2024-10-28"))+
+  geom_vline(xintercept = ymd("2024-12-17"))+
   facet_wrap(~factor(name, levels = c("CCR_MetStation_daily_rain_mm", "CCR_HPB_daily_waterlevel_cm", "USGS_TinkerCreek_dailyflow_cfs", "CCR_Dam_depth_m")), ncol = 1, scales = "free_y")+
   scale_x_date(breaks = "2 months", date_labels = "%b %y")+
   labs(x= element_blank())+
@@ -265,6 +287,32 @@ left_join(ccr_flowmate, waterlevel_precip, by = "Date") |>
   
   
 ```
+
+Format data for WVWA 
+
+```{r}
+
+# daily_waterlevel_flowmate <- left_join(waterlevel_precip, ccr_flowmate, by = "Date") |> 
+#   select(Date, Daily_rain_mm, dam_depth_m, HPB_Daily_waterlevel_cm, L_s) |> 
+#   rename(Manual_discharge_L_s = L_s) |> 
+#   filter(Date >= ymd("2024-04-23"),
+#          Date <= ymd("2024-12-17"))
+# 
+# write.csv(daily_waterlevel_flowmate, "C:/Users/dwh18/Downloads/CCR_daily_waterlevel.csv", row.names = F)
+# 
+# lm(Manual_discharge_L_s~HPB_Daily_waterlevel_cm, data = daily_waterlevel_flowmate)
+# 
+# 
+# hf_hpb_wl <- waterlevel_correct |> 
+#   select(DateTime_EST, Temp_C, waterlevel_cm)
+# 
+# write.csv(hf_hpb_wl, "C:/Users/dwh18/Downloads/CCR_stream_hf_waterlevel.csv", row.names = F)
+
+
+
+```
+
+
 
 S1 hysterisis 
 

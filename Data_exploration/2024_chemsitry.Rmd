@@ -261,12 +261,12 @@ Get EEM data
 
 ```{r}
 ## bring in distances and site class table from google sheets; have to redownload locally each time 
-distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances (1).csv") |> 
+distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances (2).csv") |> 
   mutate(Date = mdy(Date)) |> 
   select(-c(13,14)) |> 
   pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft")
 
-site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class (1).csv") |> 
+site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class (2).csv") |> 
   select(-X, -Key) |> 
   mutate(Date = mdy(Date)) |> 
   pivot_longer(-c(1), names_to = "Site_code", values_to = "Site_Class") |> 
