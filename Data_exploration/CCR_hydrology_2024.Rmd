@@ -163,18 +163,29 @@ sitenos <- c("02055100" , "02018500")
 
 #get site info
 siteinfo <- readNWISsite(sitenos)
-data_available <- whatNWISdata(siteNumber = sitenos, service = "dv")
+data_available <- whatNWISdata(siteNumber = sitenos, service = "dv") #can remove dv to get other variables
 
 #get daily Q
 startDate <- "2024-04-01" # "1987-01-01"
 #startDate <- "2020-01-01"
 endDate <- Sys.Date()
-parameter <- "00060"
+parameter <- "00060" # 00060 is daily Q; 00065 is stage 
+stage <- "00065"
 
 Qdat <- readNWISdv(sitenos, parameter, startDate, endDate) %>% 
   renameNWISColumns()
 
 Qdata <- left_join(Qdat, siteinfo, by = c("site_no"))
+
+stage_dat <- readNWISuv(sitenos, stage, startDate, endDate) %>% 
+  renameNWISColumns()
+
+stagedata <- left_join(stage_dat, siteinfo, by = c("site_no"))
+
+stagedata |> 
+  ggplot(aes(x = dateTime, y = GH_Inst, col = site_no))+
+  geom_point()+
+  labs(title = "USGS gauges height: 15 min")
 
 ## check out long term patterns in USGS sites
 # Qdata |> 
@@ -195,40 +206,47 @@ Qdata_forjoin <- Qdata |>
   select(Date, site_no, Flow) |> 
   pivot_wider(names_from = site_no, values_from = Flow, names_prefix = "Flow_")
 
+stagedata_forjoin <- stagedata |> 
+  mutate(Date = as.Date(dateTime)) |> 
+  group_by(Date, site_no) |> 
+  summarise(Stage = mean(GH_Inst, na.rm = T)) |> 
+  pivot_wider(names_from = site_no, values_from = Stage, names_prefix = "Stage_")
+
 # 4 variable plot
-left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
+CCR_usgs_data <- left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
+  left_join(stagedata_forjoin, by = "Date") |> 
   rename(CCR_Dam_depth_m = dam_depth_m,
          CCR_MetStation_daily_rain_mm = Daily_rain_mm,
          CCR_HPB_daily_waterlevel_cm = HPB_Daily_waterlevel_cm,
          USGS_CatwabaCreek_dailyflow_cfs = Flow_02018500,
-         USGS_TinkerCreek_dailyflow_cfs = Flow_02055100) |> 
+         USGS_TinkerCreek_dailyflow_cfs = Flow_02055100,
+         USGS_CatwabaCreek_dailystage_ft = Stage_02018500,
+         USGS_TinkerCreek_dailystage_ft = Stage_02055100) |> 
+  filter(Date > ymd("2024-04-15")) 
+
+CCR_usgs_data |> 
   select(-USGS_CatwabaCreek_dailyflow_cfs) |> 
+  select(-USGS_CatwabaCreek_dailystage_ft) |> 
+  select(-USGS_TinkerCreek_dailyflow_cfs) |> 
+  # select(-USGS_TinkerCreek_dailystage_ft) |> 
   pivot_longer(-1) |> 
-  filter(Date > ymd("2024-04-15")) |> 
   ggplot(aes(x = Date, y = value))+
   geom_point()+
   #scale_y_log10()+
-  geom_vline(xintercept = ymd("2024-05-22"))+
-  geom_vline(xintercept = ymd("2024-06-19"))+
-  geom_vline(xintercept = ymd("2024-07-11"))+
-  geom_vline(xintercept = ymd("2024-08-14"))+
-  geom_vline(xintercept = ymd("2024-09-16"))+
-  geom_vline(xintercept = ymd("2024-09-30"))+
-  geom_vline(xintercept = ymd("2024-10-28"))+
-  geom_vline(xintercept = ymd("2024-12-17"))+
-  facet_wrap(~factor(name, levels = c("CCR_MetStation_daily_rain_mm", "CCR_HPB_daily_waterlevel_cm", "USGS_TinkerCreek_dailyflow_cfs", "CCR_Dam_depth_m")), ncol = 1, scales = "free_y")+
+  geom_vline(xintercept = ymd("2024-05-22"))+  geom_vline(xintercept = ymd("2024-06-19"))+
+  geom_vline(xintercept = ymd("2024-07-11"))+  geom_vline(xintercept = ymd("2024-08-14"))+
+  geom_vline(xintercept = ymd("2024-09-16"))+  geom_vline(xintercept = ymd("2024-09-30"))+
+  geom_vline(xintercept = ymd("2024-10-28"))+  geom_vline(xintercept = ymd("2024-12-17"))+
+  facet_wrap(~factor(name, levels = c("CCR_MetStation_daily_rain_mm", "CCR_HPB_daily_waterlevel_cm", "USGS_TinkerCreek_dailyflow_cfs", "USGS_TinkerCreek_dailystage_ft", "CCR_Dam_depth_m")), ncol = 1, scales = "free_y")+
   scale_x_date(breaks = "2 months", date_labels = "%b %y")+
   labs(x= element_blank())+
   theme_bw()+ theme(text = element_text(size = 18))
 
 
 ###USGS to HPB regression
+
 #Catawba
-left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
-  rename(CCR_HPB_daily_waterlevel_cm = HPB_Daily_waterlevel_cm,
-         USGS_CatwabaCreek_dailyflow_cfs = Flow_02018500,
-         USGS_TinkerCreek_dailyflow_cfs = Flow_02055100) |> 
-  filter(!is.na(CCR_HPB_daily_waterlevel_cm)) |> 
+CCR_usgs_data |> 
   ggplot(aes(x = USGS_CatwabaCreek_dailyflow_cfs, y = CCR_HPB_daily_waterlevel_cm))+
   geom_point()+
   stat_poly_line(method = "lm", linewidth = 2)+
@@ -236,17 +254,29 @@ left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |>
                aes(x = USGS_CatwabaCreek_dailyflow_cfs, y = CCR_HPB_daily_waterlevel_cm, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
   theme_bw()
 
+CCR_usgs_data |> 
+  ggplot(aes(x = USGS_CatwabaCreek_dailystage_ft, y = CCR_HPB_daily_waterlevel_cm))+
+  geom_point()+
+  stat_poly_line(method = "lm", linewidth = 2)+
+  stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
+               aes(x = USGS_CatwabaCreek_dailystage_ft, y = CCR_HPB_daily_waterlevel_cm, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
+  theme_bw()
+
 #Tinker
-left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
-  rename(CCR_HPB_daily_waterlevel_cm = HPB_Daily_waterlevel_cm,
-         USGS_CatwabaCreek_dailyflow_cfs = Flow_02018500,
-         USGS_TinkerCreek_dailyflow_cfs = Flow_02055100) |> 
-  filter(!is.na(CCR_HPB_daily_waterlevel_cm)) |> 
+CCR_usgs_data |> 
   ggplot(aes(x = USGS_TinkerCreek_dailyflow_cfs, y = CCR_HPB_daily_waterlevel_cm))+
   geom_point()+
   stat_poly_line(method = "lm", linewidth = 2)+
   stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
                aes(x = USGS_TinkerCreek_dailyflow_cfs, y = CCR_HPB_daily_waterlevel_cm, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
+  theme_bw()
+
+CCR_usgs_data |> 
+  ggplot(aes(x = USGS_TinkerCreek_dailystage_ft, y = CCR_HPB_daily_waterlevel_cm))+
+  geom_point()+
+  stat_poly_line(method = "lm", linewidth = 2)+
+  stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
+               aes(x = USGS_TinkerCreek_dailystage_ft, y = CCR_HPB_daily_waterlevel_cm, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
   theme_bw()
   
 
@@ -263,6 +293,7 @@ raw_q <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1niKKxyHLZfq
 #manual Q function
 # devtools::source_url("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Scripts/L1_generation_scripts/ManualDischarge_qaqc.R")
 
+#format data
 ccr_flowmate <- raw_q |> 
   filter(Reservoir == "CCR", 
          Site == 101) |> 
@@ -273,18 +304,53 @@ ccr_flowmate <- raw_q |>
   group_by(Reservoir, Site, Date) %>% #group by site and date
   summarise(Discharge_m3s = sum(Discharge, na.rm = T),  #sum across intervals to get final discharge
          Method = "F") |> 
-  mutate(L_s = Discharge_m3s * 1000)
+  mutate(L_s = Discharge_m3s * 1000) |> 
+  left_join(waterlevel_precip, by = "Date") |> 
+  mutate(month = month(Date)) 
 
+  
+#fit model 
+exp.model <-lm(L_s ~ exp(HPB_Daily_waterlevel_cm), ccr_flowmate)
 
-left_join(ccr_flowmate, waterlevel_precip, by = "Date") |> 
-  mutate(month = month(Date)) |> 
+#plot linear model fit
+ccr_flowmate |> 
   ggplot(aes(x = HPB_Daily_waterlevel_cm, y = L_s, color = month)) +
-  geom_point() +stat_poly_line(method = "lm", linewidth = 2)+
+  geom_point() +
+  stat_poly_line(method = "lm", linewidth = 2)+
   stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
                aes(x = HPB_Daily_waterlevel_cm, y = L_s, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
+    # geom_smooth(method="lm", formula= (y ~ exp(x)), se=FALSE, linetype = 1) +
   labs(x = "HPB water level (cm)", y = "Flowmate (m3s)")+
   theme_bw()
   
+
+# #log fit trial
+# ccr_flowmate |> 
+#   ggplot(aes(x = HPB_Daily_waterlevel_cm, y = L_s, color = month)) +
+#   geom_point() +
+#   geom_smooth(method="nls", se=FALSE, formula=L_s~a*log(HPB_Daily_waterlevel_cm)+k,
+#               method.args=list(start=c(a=0, k=1)))
+
+#exponential fit from stackoverflow; https://stackoverflow.com/questions/73816347/how-to-fit-exponential-model-in-r-and-print-correct-y-abx-equation
+eq_fmt <- "`y`~`=`~%.3g~italic(e)^{%.3g~`x`}"
+
+ccr_flowmate |> 
+  ggplot(aes(x = HPB_Daily_waterlevel_cm, y = L_s, color = month)) +
+  geom_point(size = 3) + 
+  stat_smooth(method = "lm", formula =  y ~ exp(x))+
+  stat_poly_eq(mapping = aes(x = HPB_Daily_waterlevel_cm, y = L_s,
+                             label = sprintf(eq_fmt, 
+                                             after_stat(b_0), 
+                                             after_stat(b_1))), 
+               label.x = 0.1, label.y = 0.85,
+               formula =  y ~ exp(x), 
+               output.type = "numeric",
+               parse = TRUE
+  ) +
+  stat_poly_eq(label.x=0.1, label.y=0.8, 
+               aes(x = HPB_Daily_waterlevel_cm, y = L_s,label = paste(..rr.label..)), formula =  y ~ exp(x),
+               parse = TRUE, size = 3.5)+
+  theme_classic()
   
 ```
 
