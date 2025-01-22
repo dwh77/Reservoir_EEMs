@@ -225,7 +225,7 @@ sensors |>
   scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
 
 
-##trying new color scale 
+##trying new color scale gray scale
 sensors |> 
   filter(Site_code != "C1") |> 
   select(-DO_mgL) |> 
@@ -245,8 +245,31 @@ sensors |>
                        midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))+
   scale_fill_gradient2(low = "#E5E5E5", mid = "#7A7A7A", high ="#333333",
                        midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
+
+
+##trying new color scale red to blue; removed midpoint color and made outline (color) just black
+sensors |> 
+  filter(Site_code != "C1") |> 
+  select(-DO_mgL) |> 
+  pivot_longer(-c(1:9)) |> 
+  ggplot(aes(x = Distance, y = value, fill = Depth_m,
+             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
+  geom_point(size = 2)+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
+  facet_grid(name~Date, scales = "free_y")+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
+  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
+  # scale_color_gradient(high = "red", low = "blue") +
+  # scale_fill_gradient(high = "red", low = "blue") 
+  scale_fill_gradient2(low = "blue",  high ="red",
+                       midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
   
-  
+
   
   
   
