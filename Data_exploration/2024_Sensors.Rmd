@@ -105,6 +105,10 @@ ccr_ctd_24 |>
 
 ```
 
+
+
+
+
 ## CCR ADCP plots 
 
 ```{r}
@@ -266,12 +270,10 @@ sensors |>
   scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
   # scale_color_gradient(high = "red", low = "blue") +
   # scale_fill_gradient(high = "red", low = "blue") 
-  scale_fill_gradient2(low = "blue",  high ="red",
+  scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
   
 
-  
-  
   
   
   # scale_color_gradient2(low = "darkred", mid = "moccasin", high ="darkblue", 

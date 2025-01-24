@@ -188,7 +188,7 @@ solubles_summary |>
     labs(y = "DOC (mg/L)", x= "Distance from Stream (m)",  shape = "Site Type")+
   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
   scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
-  scale_fill_gradient2(low = "blue",  high ="red",
+  scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
 
 
@@ -206,7 +206,7 @@ solubles_summary |>
     labs(y = "PO4 (ug/L)", x= "Distance from Stream (m)",  shape = "Site Type")+
   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
   scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
-  scale_fill_gradient2(low = "blue",  high ="red",
+  scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
 
 
@@ -224,7 +224,7 @@ solubles_summary |>
     labs(y = "NO3 (ug/L)", x= "Distance from Stream (m)",  shape = "Site Type")+
   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
   scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
-  scale_fill_gradient2(low = "blue",  high ="red",
+  scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
 
 ##NH4
@@ -241,7 +241,7 @@ solubles_summary |>
     labs(y = "NH4 (ug/L)", x= "Distance from Stream (m)",  shape = "Site Type")+
   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
   scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
-  scale_fill_gradient2(low = "blue",  high ="red",
+  scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
 
 
@@ -461,7 +461,7 @@ eems_summary |>
        shape = "Site Type")+
   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
   scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
-  scale_fill_gradient2(low = "blue",  high ="red",
+  scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
 
 
@@ -480,7 +480,7 @@ eems_summary |>
        shape = "Site Type")+
   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
   scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
-  scale_fill_gradient2(low = "blue",  high ="red",
+  scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
 
 
