@@ -160,8 +160,8 @@ site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_C
 ##bind data together
 ctd_bind <- ccr_ctd_24 |> 
   select(Reservoir, Site, Date, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm) |> 
-  filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"), ymd("2024-08-15"))) |>  #non EEM sample days
-  mutate(SpCond_uScm = ifelse(SpCond_uScm < 100, NA, SpCond_uScm)  ) # remove low values that aren't realistic
+  filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"), ymd("2024-08-15")))   #non EEM sample days
+  # mutate(SpCond_uScm = ifelse(SpCond_uScm < 100, NA, SpCond_uScm)  ) # remove low values that aren't realistic
 
 ysi_bind <- ccr_ysi |> 
   select(Reservoir, Site, Date, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm) |> 
@@ -298,71 +298,30 @@ sensors |>
 
 ## Depth on Y dot plots - old style
 
-Site code on X
+Distance on x 
+
 ```{r}
 
-##previous style plot
-levels_sites <- c(101, 100, 98, 96, 94, 92, 90, 88, 50)
-levels_sites_code <- c("S1", "S2", "P1", "P2", "C1", "C2", "C3", "C4", "50")
-
-#Variable on Y
 sensors |> 
-  select(-DO_mgL) |> 
-  pivot_longer(-c(1:9)) |> 
-  mutate(Depth_m = ifelse(Depth_m == 1.1, 1, Depth_m),
-         Depth_m = ifelse(Depth_m == 0.4, 0.5, Depth_m)) |> #just to make color gradient a lil cleaner
-  #filter(Site > 50) |> #trim site 50 to help w/ viz
-  #ggplot(aes(x = factor(Site, level = levels_sites), y = value, color = as.factor(Depth_m)))+
-  ggplot(aes(x = factor(Site_code, levels = levels_sites_code), y = value, color = as.factor(Depth_m)))+
-  geom_point(size = 3)+
-  #facet_wrap(~name, nrow = 3, scales = "free_y")+
-  facet_grid(name~Date, scales = "free_y")+
-  # labs(title = "HPB", y = "Temp (C)", x = "Site")+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
-  guides(color = guide_legend(nrow=2, byrow=TRUE))
-  #scale_color_gradient("Depth_m",  high = "red", low = "blue") 
-  
-
-#Depth on Y
-tempplot <- sensors |> 
   select(1:9, Temp_C) |> 
   pivot_longer(-c(1:9)) |> 
-  ggplot(aes(x = factor(Site_code, levels = levels_sites_code), y = Depth_m, color = value))+
+  ggplot(aes(x = Distance, y = Depth_m, color = value))+
   geom_point()+
   scale_y_reverse()+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
   facet_grid(name~Date, scales = "free_y")+
-  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))+
+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   labs(x=element_blank())+
   scale_color_gradient(high = "red", low = "blue") # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
 
-condplot <- sensors |> 
-  select(1:9, SpCond_uScm) |> 
-  pivot_longer(-c(1:9)) |> 
-  ggplot(aes(x = factor(Site_code, levels = levels_sites_code), y = Depth_m, color = value))+
-  geom_point()+
-  scale_y_reverse()+
-  facet_grid(name~Date, scales = "free_y")+
-  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))+
-  labs(x=element_blank())+
-  scale_color_gradient(high = "black", low = "#CFCFCF") # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
-
-doplot <- sensors |> 
-  select(1:9, DOsat_percent) |> 
-  pivot_longer(-c(1:9)) |> 
-  ggplot(aes(x = factor(Site_code, levels = levels_sites_code), y = Depth_m, color = value))+
-  geom_point()+
-  scale_y_reverse()+
-  facet_grid(name~Date, scales = "free_y")+
-  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))+
-  labs(x=element_blank())+
-  scale_color_gradient(high = "blue", low = "red") # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
-
-ggarrange(tempplot , condplot , doplot, ncol = 1)
 
 
 ```
 
-Distance on x 
+
+
 
 ```{r}
 #value on Y
@@ -372,8 +331,8 @@ tempplot <- sensors |>
   ggplot(aes(x = Distance, y = Depth_m, color = value))+
   geom_point()+
   scale_y_reverse()+
-  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = 10, ymax = 12), 
-            alpha = 0.1, fill = "blue" )+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
   facet_grid(name~Date, scales = "free_y")+
   theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))+
   labs(x=element_blank())+
@@ -385,8 +344,8 @@ condplot <- sensors |>
   ggplot(aes(x = Distance, y = Depth_m, color = value))+
   geom_point()+
   scale_y_reverse()+
-    geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = 10, ymax = 12), 
-            alpha = 0.1, fill = "blue" )+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
   facet_grid(name~Date, scales = "free_y")+
   theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))+
   labs(x=element_blank())+
@@ -398,8 +357,8 @@ doplot <- sensors |>
   ggplot(aes(x = Distance, y = Depth_m, color = value))+
   geom_point()+
   scale_y_reverse()+
-  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = 10, ymax = 12), 
-            alpha = 0.1, fill = "blue" )+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
   facet_grid(name~Date, scales = "free_y")+
   theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))+
   labs(x= "Distance (m)")+
@@ -411,14 +370,20 @@ ggarrange(tempplot , condplot , doplot, ncol = 1)
 
 
 
+
+
 ## Heatmaps 
 
 ```{r}
 
 fp_new <- sensors |> 
-  filter(Date == ymd("2024-05-22")) |> 
-  mutate(Distance = Distance_ft*0.3048) |> 
+  filter(Date == ymd("2024-05-22"))  
    filter(Site < 100)
+
+
+
+  interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$Temp_C, duplicate = "strip")
+
 
 #Temp
   interp_temp <- akima::interp(x=as.numeric(fp_new$Distance), y = fp_new$Depth_m, z = fp_new$Temp_C,
@@ -431,7 +396,7 @@ ggplot(interp_temp, aes(x=x, y=y))+
     geom_raster(aes(fill=z))+
     scale_y_reverse(expand = c(0,0))+
     scale_x_continuous(expand = c(0, 0)) +
-    geom_point(data = fp_new, aes(x = (Distance_ft*0.3048), y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark cast sites 
+    geom_point(data = fp_new, aes(x = (Distance), y = 0.1, z = NULL), pch = 25, size = 3, fill = "black")+ #to mark cast sites 
     scale_fill_gradientn(colours = colorRamps::blue2green2red(60), na.value="gray")+
     labs(x = "Distance from Stream (m)", y = "Depth (m)", title = "Temp CCR 22may24")+
     theme_bw()
