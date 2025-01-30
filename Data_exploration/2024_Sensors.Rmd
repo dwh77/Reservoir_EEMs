@@ -86,28 +86,6 @@ ccr_ctd_24 <- ccr_ctd_clean(ccr_ctd_24)
 ```
 
 
-CTD check plots 
-
-```{r}
-#plot 4 focal variables and remove known bad points
-
-ccr_ctd_24 |> 
-  filter(Chla_ugL < 50) |> #remove crazy high chla at site 90 (likely sensor in mud)
-  mutate(SpCond_uScm = ifelse(Date == ymd("2024-06-19") & SpCond_uScm < 110, NA, SpCond_uScm )) |> #remove Cond bubble issues that should get worked out at some point
-  pivot_longer(-c(1:6)) |> 
-  filter(name %in% c("Temp_C", "SpCond_uScm", "DO_mgL", "Chla_ugL", "CDOM_ugL")) |> 
-  # filter(Site == 50) |> 
-  ggplot(aes(x = value, y = Depth_m, color = as.factor(Date)))+
-  geom_line(orientation = "y")+
-  scale_y_reverse()+
-  facet_grid(Site~name, scales = "free")+
-  theme_bw()
-
-```
-
-
-
-
 
 ## CCR ADCP plots 
 
@@ -209,49 +187,8 @@ sensors <- left_join(sensors, site_class, by = c("Site_code", "Date")) |>
 ## Value on Y dot plots 
 
 ```{r}
-### flipping so value is on y and color is depth
-sensors |> 
-  filter(Site_code != "C1") |> 
-  select(-DO_mgL) |> 
-  pivot_longer(-c(1:9)) |> 
-  ggplot(aes(x = Distance, y = value, color = Depth_m, fill = Depth_m,
-             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
-  geom_point(size = 2)+
-  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
-            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
-  facet_grid(name~Date, scales = "free_y")+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
-  labs(x= "Distance from Stream (m)",
-       shape = "Site Type")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
-  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
-  scale_color_gradient(high = "#CFCFCF", low = "black", breaks = c(3,6,9,12))+
-  scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
+## value is on y and color is depth
 
-
-##trying new color scale gray scale
-sensors |> 
-  filter(Site_code != "C1") |> 
-  select(-DO_mgL) |> 
-  pivot_longer(-c(1:9)) |> 
-  ggplot(aes(x = Distance, y = value, color = Depth_m, fill = Depth_m,
-             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
-  geom_point(size = 2)+
-  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
-            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
-  facet_grid(name~Date, scales = "free_y")+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
-  labs(x= "Distance from Stream (m)",
-       shape = "Site Type")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
-  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
-    scale_color_gradient2(low = "#E5E5E5", mid = "#7A7A7A", high ="#333333",
-                       midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))+
-  scale_fill_gradient2(low = "#E5E5E5", mid = "#7A7A7A", high ="#333333",
-                       midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
-
-
-##trying new color scale red to blue; removed midpoint color and made outline (color) just black
 sensors |> 
   filter(Site_code != "C1") |> 
   select(-DO_mgL) |> 
@@ -272,25 +209,15 @@ sensors |>
   # scale_fill_gradient(high = "red", low = "blue") 
   scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
+
+  #   scale_color_gradient2(low = "#E5E5E5", mid = "#7A7A7A", high ="#333333",
+  #                      midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))+
+  # scale_fill_gradient2(low = "#E5E5E5", mid = "#7A7A7A", high ="#333333",
+  #                      midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
   
 
   
-  
-  # scale_color_gradient2(low = "darkred", mid = "moccasin", high ="darkblue", 
-  #                      midpoint = 3,  guide = "colourbar")+
-  # scale_fill_gradient2(low = "darkred", mid = "moccasin", high ="darkblue",  
-  #                      midpoint = 3,  guide = "colourbar")
 
-
-##below color gradient: https://stackoverflow.com/questions/17864233/customized-scale-color-gradient2-in-ggplot2
-  # scale_color_gradient2(low = "#0000FF", mid = "#FFFFFF", high ="#FF0000",
-  #                      midpoint = median(sensors$Depth_m),  guide = "colourbar")+
-  # scale_fill_gradient2(low = "#0000FF", mid = "#FFFFFF", high ="#FF0000",
-  #                      midpoint = median(sensors$Depth_m),  guide = "colourbar")
-
-##DWH trial 
-  # scale_color_gradient2(high = "red", mid = "green", low = "blue", breaks = c(0.1,10,20))+
-  # scale_fill_gradient2(high = "red", mid = "green", low = "blue", breaks = c(0.1,10,20))
 
 ```
 
@@ -301,7 +228,25 @@ sensors |>
 Distance on x 
 
 ```{r}
+#facet grid 
+sensors |> 
+  filter(Site_code != "C1") |> 
+  select(-DO_mgL) |> 
+  pivot_longer(-c(1:9)) |> 
+  ggplot(aes(x = Distance, y = Depth_m, fill = value))+
+  geom_point(size = 2)+
+  scale_y_reverse()+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
+  facet_grid(name~Date, scales = "free_y")+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))
 
+
+#one plot at a time 
 sensors |> 
   select(1:9, Temp_C) |> 
   pivot_longer(-c(1:9)) |> 
@@ -315,6 +260,174 @@ sensors |>
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   labs(x=element_blank())+
   scale_color_gradient(high = "red", low = "blue") # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
+
+
+##raster 
+sensors |> 
+  select(1:9, Temp_C) |> 
+  pivot_longer(-c(1:9)) |> 
+  ggplot(aes(x = Distance, y = Depth_m, fill = value))+
+  geom_raster()+
+  scale_y_reverse()+
+  # geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+  #           alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
+  facet_grid(name~Date, scales = "free_y")+
+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_fill_gradient(high = "red", low = "blue") # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
+
+#trying  https://dewey.dunnington.ca/post/2019/depth-time-heatmaps/
+
+estimate_temp_by_site <- function(target_date, target_site, target_depth) {
+  data_for_date <- sensors %>% 
+    filter(Date == target_date,
+           Site == target_site) %>%
+    arrange(Depth_m)
+  
+  # approx() is one way to do a linear interpolation
+  approx(data_for_date$Depth_m, data_for_date$Temp_C, xout = target_depth)$y
+}
+
+estimate_temp_by_site(ymd("2024-05-22"), 90, c(0, 1, 1.5, 2))
+
+temp_interp_depth <- crossing(
+  tibble(Date = unique(sensors$Date)),
+  tibble(Site = unique(sensors$Site)),
+  # depths can now be any value
+  tibble(Depth_m = seq(0.1, max(sensors$Depth_m), length.out = 100))
+) %>%
+  group_by(Date) %>%
+  mutate(Temp_C = estimate_temp_by_site(Date[1], Site[1], Depth_m))
+
+
+```
+
+
+
+Chat gpt trial
+
+```{r}
+
+# ##chat gpt trial
+# df_grouped <- sensors |> 
+#   group_by(Date, Site) 
+# 
+# # Create a function for linear interpolation across Depths
+# interpolate_depth <- function(data) {
+#   approx(data$Depth_m, data$Temp_C, xout = seq(min(data$Depth_m), max(data$Depth_m), by = 0.1))
+# }
+# 
+# 
+# 
+# # Apply the interpolation function for each group
+# df_interpolated_depth <- df_grouped %>%
+#   do(data.frame(Depth_m = seq(min(Depth_m), max(Depth_m), by = 0.1),
+#                 Temp_C = interpolate_depth(Temp_C)))
+
+  
+
+#fresh chapgtp 
+df_grouped <- sensors |> 
+  select(Site, Date, Depth_m, Temp_C) |> 
+  filter(Site < 100) |> 
+  group_by(Date, Site) |> 
+  nest()
+
+interpolate_depth <- function(df) {
+  if (nrow(df) < 2) {
+    # If there's only one depth measurement, return the original data
+    return(df)
+  } else {
+    depth_seq <- seq(min(df$Depth_m, na.rm = TRUE), max(df$Depth_m, na.rm = TRUE), by = 0.1)
+    temp_interp <- approx(df$Depth_m, df$Temp_C, xout = depth_seq, method = "linear", rule = 2)$y  ## add rule = 1 or 2; 1 will make NAs for values outside of df 
+    data.frame(Depth_m = depth_seq, Temp_C = temp_interp)
+  }
+}
+
+df_interpolated <- df_grouped %>%
+  mutate(data = map(data, interpolate_depth)) %>%
+  unnest(data)
+
+#check of interp
+df_interpolated |> 
+  ggplot(aes(x = Site, y = Depth_m, color = Temp_C))+
+  geom_point()+
+  scale_y_reverse()+
+  facet_grid(~Date, scales = "free_y")+
+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_color_gradient(high = "red", low = "blue") # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
+
+## Now interpolate across distance
+df_next <- df_interpolated |> 
+  mutate(Site_code = ifelse(Site == 101, "S1", NA),
+         Site_code = ifelse(Site == 100, "S2", Site_code),
+         Site_code = ifelse(Site == 98, "P1", Site_code),
+         Site_code = ifelse(Site == 96, "P2", Site_code),
+         Site_code = ifelse(Site == 94, "C1", Site_code),
+         Site_code = ifelse(Site == 92, "C2", Site_code),
+         Site_code = ifelse(Site == 90, "C3", Site_code),
+         Site_code = ifelse(Site == 88, "C4", Site_code),
+         Site_code = ifelse(Site == 50, "C50", Site_code)
+         ) |> 
+  left_join(distances, by = c("Site_code", "Date")) |> 
+    mutate(Distance = Distance_ft*0.3048,
+         Dry_start = Dry_start*0.3048,
+         Dry_end = Dry_end*0.3048) |>  
+  select(Site, Date, Depth_m, Distance, Temp_C)
+
+#code to interp
+df_interpolated_across_distances <- df_next %>%
+  group_by(Date, Depth_m) %>%
+  nest()
+
+interpolate_distance <- function(df) {
+  if (nrow(df) < 2) {
+    # If there's only one distance measurement, return the original data
+    return(df)
+  } else {
+    distance_seq <- seq(min(df$Distance, na.rm = TRUE), max(df$Distance, na.rm = TRUE), by = 1)
+    temp_interp <- approx(df$Distance, df$Temp_C, xout = distance_seq, method = "linear")$y
+    data.frame(Distance = distance_seq, Temp_C = temp_interp)
+  }
+}
+
+
+
+df_interpolated_across_distances <- df_interpolated_across_distances %>%
+  mutate(data = map(data, interpolate_distance)) %>%
+  unnest(data)
+
+#check out the interp
+df_interpolated_across_distances |> 
+  ggplot(aes(x = Distance, y = Depth_m, color = Temp_C))+
+  geom_point()+
+  scale_y_reverse()+
+  facet_grid(~Date, scales = "free_y")+
+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_color_gradient(high = "red", low = "blue") # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+DWH interpolation heatmap trials 
+
+```{r}
+
+
 
 
 
@@ -377,8 +490,8 @@ ggarrange(tempplot , condplot , doplot, ncol = 1)
 ```{r}
 
 fp_new <- sensors |> 
-  filter(Date == ymd("2024-05-22"))  
-   filter(Site < 100)
+  filter(Date == ymd("2024-08-14")) |>  
+   filter(Site < 101)
 
 
 
