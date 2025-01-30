@@ -379,6 +379,145 @@ eems_summary |>
 
 ```
 
+## DWH exploration
+
+put sensors, eems, and hydrology all together
+```{r}
+head(eems_summary)
+head(CCR_usgs_data)
+head(sensors)
+
+data <- sensors |> 
+  select(Site, Date, Depth_m, Temp_C:SpCond_uScm) |> 
+  full_join(eems_summary, by = c("Site", "Date", "Depth_m")) |> 
+  left_join(CCR_usgs_data, by = "Date")
+
+
+```
+
+make some plots 
+
+```{r}
+
+#all data by depth
+data |> 
+  ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m
+             ))+
+  geom_smooth()+
+  geom_point(shape = 21, size = 3) + 
+  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
+  ylim(1.45,14.4)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",  fill = "Depth (m)", y = "HIX")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+  
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
+
+#all depths by date
+data |> 
+  mutate(Julian = yday(Date)) |> 
+  ggplot(aes(x = Distance, y = HIX_mean, color = (Julian)
+             ))+
+  geom_smooth()+
+  geom_point(size = 3) + 
+  ylim(1.45,14.4)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",  shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+
+  scale_color_viridis_b(breaks = c(100,200,300))
+
+
+#just 0.1 m 
+data |> 
+  filter(Depth_m == 0.1) |> 
+  ggplot(aes(x = Distance, y = HIX_mean, color = as.factor(Date)
+             ))+
+  geom_point() + 
+  geom_line()+
+  ylim(1.45,14.4)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",  shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))
+
+
+#averaged across depths BY DATE
+data |> 
+  group_by(Date, Site, Distance) |> 
+  summarise(HIX_mean_depth = mean(HIX_mean, na.rm = T),
+            HIX_min = min(HIX_mean, na.rm = T),
+            HIX_max = max(HIX_mean, na.rm = T)) |> 
+  ggplot(aes(x = Distance, y = HIX_mean_depth, color = as.factor(Date)
+             ))+
+  geom_point() + 
+  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
+  ylim(1.45,14.4)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",  shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))
+
+
+# #averaged across depths BY Cond
+# data |> 
+#   group_by(Date, Site, Distance, SpCond_uScm) |> 
+#   summarise(HIX_mean_depth = mean(HIX_mean, na.rm = T),
+#             HIX_min = min(HIX_mean, na.rm = T),
+#             HIX_max = max(HIX_mean, na.rm = T)) |> 
+#   ggplot(aes(x = Distance, y = HIX_mean_depth, color = SpCond_uScm
+#              ))+
+#   geom_point() + 
+#   geom_smooth()+
+#   geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
+#   ylim(1.45,14.4)+
+#   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+#                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+#   labs(x= "Distance from Stream (m)",  shape = "Site Type")+
+#   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+
+#     scale_color_gradient(low = "red",  high ="blue")
+
+
+#averaged across depths BY STAGE
+summary(data$CCR_HPB_daily_waterlevel_cm)
+
+data |> 
+  group_by(Date, Site, Distance, CCR_HPB_daily_waterlevel_cm) |> 
+  summarise(HIX_mean_depth = mean(HIX_mean, na.rm = T),
+            HIX_min = min(HIX_mean, na.rm = T),
+            HIX_max = max(HIX_mean, na.rm = T)) |> 
+  ggplot(aes(x = Distance, y = HIX_mean_depth, fill = CCR_HPB_daily_waterlevel_cm
+             ))+
+  geom_smooth()+
+  geom_point(shape = 21, size = 3) + 
+  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
+  ylim(1.45,14.4)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",  fill = "Stream Water Level (cm)", y = "HIX")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+
+    scale_fill_gradient2(low = "red",  high ="blue", midpoint = 7)
+
+#stage all data
+data |> 
+  ggplot(aes(x = Distance, y = HIX_mean, fill = CCR_HPB_daily_waterlevel_cm
+             ))+
+  geom_smooth()+
+  geom_point(shape = 21, size = 3) + 
+  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
+  ylim(1.45,14.4)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",  fill = "Stream Water Level (cm)", y = "HIX")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+
+    scale_fill_gradient2(low = "red",  high ="blue", midpoint = 7)
+
+
+
+
+```
+
 
 
 ## EEMs plots by distance, value on Y
@@ -399,11 +538,11 @@ eems_summary |>
   mutate(max_depth = max(Depth_m) + 0.5) |> 
   ggplot(aes(x = Distance, y = Depth_m , fill = HIX_mean))+
   geom_point(shape = 21, color = "black", size = 3) + 
-  geom_line(aes(y = max_depth), color = "black")+
-  geom_hline(yintercept = -0.5)+
+  # geom_line(aes(y = max_depth), color = "black")+
+  # geom_hline(yintercept = -0.5)+
   scale_y_reverse()+
   # geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
-  facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
+  facet_wrap(~Date, scales = "fixed", ncol = 7)+ 
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
             alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
@@ -449,6 +588,32 @@ eems_summary |>
 
 ```
 
+Value on Y
+
+```{r}
+
+eems_summary |> 
+  ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m,
+             #shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))
+             ))+
+  geom_point(shape = 21, size = 3) + 
+  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
+  facet_wrap(~Date, scales = "fixed", ncol = 7)+ 
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
+  ylim(1.45,14.4)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  #scale_shape_manual(values = c(24, 22, 21, 25))+ 
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
+
+
+
+```
 
 
 
