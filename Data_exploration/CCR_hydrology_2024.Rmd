@@ -18,10 +18,12 @@ library(ggpmisc) #stat poly line
 ########### get data ###############
 
 ### CCR dam for water level
-ccr_dam_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/2/ea78dd541e089687af1f4c4b550bc9ca")
+ccr_dam_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/3/4afb209b30ebed898334badd3819d854" )
 ccr_dam_git <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/refs/heads/ccre-dam-data-qaqc/ccre-waterquality_L1.csv") 
 
-rbind(ccr_dam_edi, ccr_dam_git) |> 
+ccr_dam <- rbind(ccr_dam_edi, ccr_dam_git)
+
+ccr_dam |> 
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
   summarise(#pressure = mean(LvlPressure_psi_13, na.rm = T),
@@ -32,11 +34,15 @@ rbind(ccr_dam_edi, ccr_dam_git) |>
     geom_line(linewidth = 2) + scale_x_date(date_labels = "%b") + theme_bw()
 
 ### CCR met 
-#ccr_met_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1105/2/5c9281623ab7676ca1be85ee1761bf28")
-ccr_met_git <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data-qaqc/ccre_met_L1.csv") 
+ccr_met_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1105/3/df0ce4fc90f220b65c400b997abae37b")
+ccr_met_git <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/refs/heads/ccre-dam-data-qaqc/ccre_met_L1.csv") 
+
+ccr_met <- ccr_met_edi |> 
+  select(-starts_with("Note")) |> #remove note columns to bind
+  rbind(ccr_met_git) 
 
 ##format for bind 
-ccr_met_bind <- ccr_met_git |> 
+ccr_met_bind <- ccr_met |> 
   select(DateTime, BP_Average_kPa, Flag_BP_Average_kPa) |> 
   mutate(Date = as.Date(DateTime),
          Hour = hour(DateTime),
@@ -122,7 +128,7 @@ waterlevel_correct |>
 ############## compile daily data for well, dam, rain ######################
 
 ##precip plot 
-daily_rain <- ccr_met_git |> 
+daily_rain <- ccr_met |> 
   filter(DateTime > ymd("2024-04-01")) |> 
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
@@ -134,7 +140,7 @@ daily_rain <- ccr_met_git |>
   geom_line()
  
  ##Dam water level plot
- daily_dam_waterlevel <- ccr_dam_git |> 
+ daily_dam_waterlevel <- ccr_dam |> 
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
   summarise(#pressure = mean(LvlPressure_psi_13, na.rm = T),
