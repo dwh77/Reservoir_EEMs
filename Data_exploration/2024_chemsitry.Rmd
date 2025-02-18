@@ -131,7 +131,7 @@ solubles_plotting <- left_join(ccr_solubles, distances, by = c("Site_code", "Dat
   filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
   rename(DOC = 10,
          Site = Site_number) |> 
-  select(Reservoir, Site, Site_code, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, DOC, NO3, NH4, PO4 )
+  select(Reservoir, Site, Site_code, Site_Class, Depth_m, Date, Rep, Distance, Dry_start, Dry_end, DOC, NO3, NH4, PO4 )
 
 
 ```
@@ -158,6 +158,10 @@ solubles_summary <- solubles_plotting |>
             NO3_max = max(NO3, na.rm = T)
                         ) |>
   mutate(Rep = ifelse(DOC_mean != DOC_min, "Y", "N"))
+
+
+#check missing samples 
+z <- arrange(solubles_plotting, Date, desc(Site), Depth_m)
 
 
 #### Rep check
@@ -291,6 +295,9 @@ site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_C
 ## EEM data
 eems24 <- read.csv("../EEMs_Results_2024.csv")
 
+zz <- arrange(eems24, mdy(Date), desc(Site), Depth_m)
+
+
 eems <- eems24 |> 
   # mutate(Distance_ft = ifelse(Site == 101, 0, NA),
   #        Distance_ft = ifelse(Site == 100, 407, Distance_ft),
@@ -351,6 +358,9 @@ eems_summary <- eems_plotting |>
             BIX_max = max(BIX, na.rm = T)
                         ) |> 
   mutate(Rep = ifelse(HIX_mean != HIX_min, "Y", "N"))
+
+zzz <- arrange(eems_summary, Date, desc(Site), Depth_m)
+
 
 
 #plot w/ error bars

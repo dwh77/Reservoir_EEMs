@@ -17,6 +17,7 @@ dam <- ccrdam |>
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
   summarise(dam_depth_m = mean(LvlDepth_m_13, na.rm = T)) |> 
+  filter(dam_depth_m > 14) |> 
   mutate(Year = year(Date),
          Julian_date = yday(Date))
 
