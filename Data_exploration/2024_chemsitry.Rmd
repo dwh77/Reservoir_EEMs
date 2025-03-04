@@ -195,6 +195,18 @@ solubles_summary |>
   scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
 
+    #across dates
+solubles_summary |> 
+  ggplot(aes(x = Distance, y = DOC_mean, fill = Depth_m ))+
+  geom_smooth()+
+  geom_point(shape = 21, size = 3) + 
+  geom_errorbar(aes(ymin = DOC_min, ymax = DOC_max), width = 2) +
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",  fill = "Depth (m)", y = "DOC (mg/L)")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+  
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
 
 ##PO4
 solubles_summary |> 
@@ -278,11 +290,11 @@ Get EEM data
 ## bring in distances and site class table from google sheets; have to redownload locally each time 
 distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances.csv") |> 
   mutate(Date = mdy(Date)) |> 
-  select(-c(13,14)) |> 
+  dplyr::select(-c(13,14)) |> 
   pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft")
 
 site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class.csv") |> 
-  select(-X, -Key) |> 
+  dplyr::select(-X, -Key) |> 
   mutate(Date = mdy(Date)) |> 
   pivot_longer(-c(1), names_to = "Site_code", values_to = "Site_Class") |> 
   mutate(Site_Class = ifelse(Site_Class %in% c("S", "S "), "Stream", Site_Class),
@@ -322,7 +334,7 @@ eems <- eems24 |>
          Site_code = ifelse(Site == 88, "C4", Site_code),
          Site_code = ifelse(Site == 50, "C50", Site_code)
          ) |> 
-  select(Reservoir, Site, Site_code, Depth_m, Date, FI., HIX., BIX., T., A., A.T., a254, a350, A254, A350, NOTES)
+  dplyr::select(Reservoir, Site, Site_code, Depth_m, Date, FI., HIX., BIX., T., A., A.T., a254, a350, A254, A350, NOTES)
 
 
 eems_plotting <- left_join(eems, distances, by = c("Site_code", "Date")) |> 
@@ -331,7 +343,7 @@ eems_plotting <- left_join(eems, distances, by = c("Site_code", "Date")) |>
          Dry_start = Dry_start*0.3048,
          Dry_end = Dry_end*0.3048) |> 
   filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
-  select(Reservoir, Site, Site_code, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, FI., HIX., BIX., T., A., A.T., a254, a350, NOTES)
+  dplyr::select(Reservoir, Site, Site_code, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, FI., HIX., BIX., T., A., A.T., a254, a350, NOTES)
 
 
 eems_plotting
@@ -348,7 +360,7 @@ eems_summary <- eems_plotting |>
   filter(Site_code != "C1") |> 
   rename(HIX = HIX.,
          BIX = BIX.) |>  #### can just change the rename here for what value you want to look at
-  select(Site, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, HIX, BIX) |> 
+  dplyr::select(Site, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, HIX, BIX) |> 
   group_by(Site, Site_Class, Depth_m, Date, Dry_start, Dry_end, Distance) |> 
   summarise(HIX_mean = mean(HIX, na.rm = T),
             HIX_min = min(HIX, na.rm = T),

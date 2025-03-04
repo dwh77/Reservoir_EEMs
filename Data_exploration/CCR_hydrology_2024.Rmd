@@ -167,7 +167,9 @@ waterlevel_precip <-  left_join(waterlevel_precip, daily_dam_waterlevel, by = "D
 
 ```
 
-Compare to USGS data 
+##Compare to USGS data 
+
+Set up data
 
 ```{r}
 library(dataRetrieval)
@@ -209,7 +211,7 @@ stagedata |>
 #   theme_bw()+
 #   theme(legend.position = "top")
 
-#################### subset data to compare to HPB #####################################3
+#################### subset data to compare to HPB ####################################
 
 Qdata |> 
   filter(Date >= ymd("2024-04-15")) |> 
@@ -238,6 +240,13 @@ CCR_usgs_data <- left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |>
          USGS_TinkerCreek_dailystage_ft = Stage_02055100) |> 
   filter(Date > ymd("2024-04-15")) 
 
+```
+
+
+Plots 
+
+```{r}
+
 faceted_hydro <- CCR_usgs_data |> 
   #filter(Date > ymd("2024-08-01")) |> 
   select(-USGS_CatwabaCreek_dailyflow_cfs) |> 
@@ -252,6 +261,7 @@ faceted_hydro <- CCR_usgs_data |>
   geom_vline(xintercept = ymd("2024-07-11"))+  geom_vline(xintercept = ymd("2024-08-14"))+
   geom_vline(xintercept = ymd("2024-09-16"))+  geom_vline(xintercept = ymd("2024-09-30"))+
   geom_vline(xintercept = ymd("2024-10-28"))+  geom_vline(xintercept = ymd("2024-12-17"))+
+  geom_vline(xintercept = ymd("2025-02-26"))+
   facet_wrap(~factor(name, levels = c("CCR_MetStation_daily_rain_mm", "CCR_HPB_daily_waterlevel_cm", "USGS_TinkerCreek_dailyflow_cfs", "USGS_TinkerCreek_dailystage_ft", "CCR_Dam_depth_m")), ncol = 1, scales = "free_y")+
   scale_x_date(breaks = "1 months", date_labels = "%b")+
   labs(x= element_blank())+
@@ -261,26 +271,14 @@ faceted_hydro <- CCR_usgs_data |>
 faceted_hydro
 #plotly::ggplotly(faceted_hydro)
 
+```
 
+
+USGS regressions
+
+```{r}
 
 ###USGS to HPB regression
-
-#Catawba
-CCR_usgs_data |> 
-  ggplot(aes(x = USGS_CatwabaCreek_dailyflow_cfs, y = CCR_HPB_daily_waterlevel_cm))+
-  geom_point()+
-  stat_poly_line(method = "lm", linewidth = 2)+
-  stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
-               aes(x = USGS_CatwabaCreek_dailyflow_cfs, y = CCR_HPB_daily_waterlevel_cm, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
-  theme_bw()
-
-CCR_usgs_data |> 
-  ggplot(aes(x = USGS_CatwabaCreek_dailystage_ft, y = CCR_HPB_daily_waterlevel_cm))+
-  geom_point()+
-  stat_poly_line(method = "lm", linewidth = 2)+
-  stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
-               aes(x = USGS_CatwabaCreek_dailystage_ft, y = CCR_HPB_daily_waterlevel_cm, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
-  theme_bw()
 
 #Tinker
 CCR_usgs_data |> 
@@ -298,9 +296,77 @@ CCR_usgs_data |>
   stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
                aes(x = USGS_TinkerCreek_dailystage_ft, y = CCR_HPB_daily_waterlevel_cm, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
   theme_bw()
-  
 
 
+# #### logistic fits
+# test <- CCR_usgs_data |> 
+#   rename(hpb = CCR_HPB_daily_waterlevel_cm, usgs = USGS_CatwabaCreek_dailystage_ft) |> 
+#   filter(hpb > 0, 
+#          !is.na(hpb)) |> 
+#   mutate(hpb = hpb/30.48)
+# 
+# # logistic_model <- glm(hpb ~ usgs, data = test, family = poisson)
+# # 
+# # broom::tidy(logistic_model)
+# 
+# logistic_model <- nls(hpb ~ a / (1 + exp(-(usgs - b) / c)), data = test,
+#                       start = list(a = median(test$hpb), b = median(test$usgs), c = 1))
+# 
+# model_summary <- summary(logistic_model)
+# model_summary
+# 
+# ggplot(test, aes(x = usgs, y = hpb)) +
+#   geom_point() +
+#   stat_function(fun = function(x) coef(logistic_model)[1] /
+#                               (1 + exp(-(x - coef(logistic_model)[2]) / coef(logistic_model)[3])),
+#                 color = "blue") +
+#   labs(title = "Logistic Curve Fit", x = "USGS", y = "HPB")
+
+
+
+#### GAMS 
+library(mgcv)
+
+test <- CCR_usgs_data |> 
+  rename(hpb = CCR_HPB_daily_waterlevel_cm, catawba = USGS_CatwabaCreek_dailystage_ft,
+         tinker = USGS_TinkerCreek_dailystage_ft) |> 
+  mutate(catawba = catawba*30.48,
+         tinker = tinker*30.48)
+
+test |> 
+  ggplot(aes(x = catawba, y = hpb))+
+  geom_point()+
+  geom_smooth(method = "gam", formula = y ~ s(x))
+
+##catawba gam 
+model <- gam(hpb ~ s(catawba), data = test) 
+summary(model)
+
+test$predicted_hpb_C <- predict(model, newdata = test)
+
+#tinker gam
+model2 <- gam(hpb ~ s(tinker), data = test) 
+summary(model2)
+
+test$predicted_hpb_T <- predict(model2, newdata = test)
+
+#both gam
+model3 <- gam(hpb ~ s(catawba) + s(tinker), data = test) 
+summary(model3)
+
+test$predicted_hpb_CT <- predict(model3, newdata = test)
+
+#plot
+gamsplot <- test |> 
+  #select(Date, catawba, tinker, hpb, predicted_hpb_C, predicted_hpb_T, predicted_hpb_CT) |> 
+  select(Date, hpb, predicted_hpb_C, predicted_hpb_T, predicted_hpb_CT) |> 
+  pivot_longer(-1) |> 
+ggplot(aes(x= Date, y= value, color = name)) +
+  geom_line() +
+  #scale_y_log10()+
+  theme_bw()
+
+ggplotly(gamsplot)
 
 ```
 
@@ -308,16 +374,14 @@ CCR_usgs_data |>
 ## Get flowmate Q
 
 ```{r}
-raw_q <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1niKKxyHLZfqnJEZ93nu49yCn0Wv_duW33bYS81PHY6o/edit#gid=0")
+raw_q <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1fgYcGsZeALuwdAX3H0UeA3u57zKsuqTkouh2bxuBTKw/edit?gid=0#gid=0")
 
-#manual Q function
-# devtools::source_url("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Scripts/L1_generation_scripts/ManualDischarge_qaqc.R")
-
-#format data
+#format data and calculate Q
 ccr_flowmate <- raw_q |> 
+  mutate(Date = mdy(Date)) |> 
   filter(Reservoir == "CCR", 
          Site == 101) |> 
-    filter(Method == "Flowmate") %>%   #filter to just flowmate measurements 
+    filter(Method %in% c("Flowmate", "Flowmeter")) %>%   #filter to just flowmate measurements 
   mutate(Depth_m = Depth_cm/100,    
          Velocity_m.s = ifelse(Velocity_unit %in% c("ft_s", "ft/s"), Velocity*0.3048, Velocity), 
          Discharge = Depth_m * Velocity_m.s * WidthInterval_m    ) %>% 
@@ -327,6 +391,10 @@ ccr_flowmate <- raw_q |>
   mutate(L_s = Discharge_m3s * 1000) |> 
   left_join(waterlevel_precip, by = "Date") |> 
   mutate(month = month(Date)) 
+
+#plot of flowmate data 
+ccr_flowmate |> ggplot(aes(x = Date, y = L_s))+ 
+  geom_point()+ geom_line()
 
   
 #fit model 
