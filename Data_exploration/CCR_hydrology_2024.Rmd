@@ -228,7 +228,7 @@ stagedata_forjoin <- stagedata |>
   summarise(Stage = mean(GH_Inst, na.rm = T)) |> 
   pivot_wider(names_from = site_no, values_from = Stage, names_prefix = "Stage_")
 
-# 4 variable plot
+# Join data together for 4 variable plot
 CCR_usgs_data <- left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
   left_join(stagedata_forjoin, by = "Date") |> 
   rename(CCR_Dam_depth_m = dam_depth_m,

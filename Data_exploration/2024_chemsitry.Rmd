@@ -183,7 +183,7 @@ solubles_summary |>
   #filter(!Site == 50) |> 
   ggplot(aes(x = Distance, y = DOC_mean, fill = Depth_m,
              shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
-  geom_point() + 
+  geom_point(size = 3) + 
   geom_errorbar(aes(ymin = DOC_min, ymax = DOC_max), width = 2) +
   facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), alpha = 0.01, fill = "gray", color = NA )+ 
