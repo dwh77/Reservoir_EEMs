@@ -103,21 +103,21 @@ waterlevel_correct <- left_join(hobo_bind, ccr_met_bind, by = "DateTime_EST") |>
   mutate(corrected_Pres_kPa = HOBO_Abs_Pres_kPa - BP_Average_kPa) |> 
   mutate(waterlevel_cm = corrected_Pres_kPa * 10.1972)
 
-#stream temp hysteresis
-waterlevel_correct |> 
-  ggplot(aes(x = waterlevel_cm, y = Temp_C, color = DateTime_EST))+
-  geom_point()+
-  theme_bw() + labs(title = "10 min data")
-
-
-waterlevel_correct |> 
-  mutate(Date = as.Date(DateTime_EST)) |> 
-  group_by(Date) |> 
-  summarise(stage = mean(waterlevel_cm, na.rm = T),
-            temp = mean(Temp_C, na.rm = T)) |> 
-  ggplot(aes(x = stage, y = temp, color = Date))+
-  geom_point()+
-  theme_bw() + labs(title = "Daily")
+# #stream temp hysteresis
+# waterlevel_correct |> 
+#   ggplot(aes(x = waterlevel_cm, y = Temp_C, color = DateTime_EST))+
+#   geom_point()+
+#   theme_bw() + labs(title = "10 min data")
+# 
+# 
+# waterlevel_correct |> 
+#   mutate(Date = as.Date(DateTime_EST)) |> 
+#   group_by(Date) |> 
+#   summarise(stage = mean(waterlevel_cm, na.rm = T),
+#             temp = mean(Temp_C, na.rm = T)) |> 
+#   ggplot(aes(x = stage, y = temp, color = Date))+
+#   geom_point()+
+#   theme_bw() + labs(title = "Daily")
 
 ############### plot 10-min data ######################
 
@@ -230,14 +230,15 @@ stagedata_forjoin <- stagedata |>
 
 # Join data together for 4 variable plot
 CCR_usgs_data <- left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
-  left_join(stagedata_forjoin, by = "Date") |> 
+  #left_join(stagedata_forjoin, by = "Date") |> 
   rename(CCR_Dam_depth_m = dam_depth_m,
          CCR_MetStation_daily_rain_mm = Daily_rain_mm,
          CCR_HPB_daily_waterlevel_cm = HPB_Daily_waterlevel_cm,
          USGS_CatwabaCreek_dailyflow_cfs = Flow_02018500,
          USGS_TinkerCreek_dailyflow_cfs = Flow_02055100,
-         USGS_CatwabaCreek_dailystage_ft = Stage_02018500,
-         USGS_TinkerCreek_dailystage_ft = Stage_02055100) |> 
+         #USGS_CatwabaCreek_dailystage_ft = Stage_02018500,
+         #USGS_TinkerCreek_dailystage_ft = Stage_02055100
+         ) |> 
   filter(Date > ymd("2024-04-15")) 
 
 ```
@@ -249,8 +250,8 @@ Plots
 
 faceted_hydro <- CCR_usgs_data |> 
   #filter(Date > ymd("2024-08-01")) |> 
-  select(-USGS_CatwabaCreek_dailyflow_cfs) |> 
-  select(-USGS_CatwabaCreek_dailystage_ft) |> 
+  #select(-USGS_CatwabaCreek_dailyflow_cfs) |> 
+  #select(-USGS_CatwabaCreek_dailystage_ft) |> 
   select(-USGS_TinkerCreek_dailyflow_cfs) |> 
   # select(-USGS_TinkerCreek_dailystage_ft) |> 
   pivot_longer(-1) |> 

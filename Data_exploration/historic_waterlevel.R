@@ -1,14 +1,55 @@
-## CCR water level exploration
+## CCR Historic Hydrology
 library(tidyverse)
 library(ggpmisc) #stat poly line
 
 
+############# NOAA ROA ############################
+roa1 <- read.csv("./Data_exploration/NOAA_ROA/3958298_NOAA_ROA_20240101_20250310.csv")
+roa2 <- read.csv("./Data_exploration/NOAA_ROA/3958385_NOAA_ROA_20140101_20231231.csv")
+
+roa <- rbind(roa1, roa2) |> 
+  filter(REPORT_TYPE == "SOD  ") |> 
+  dplyr::select(DATE, DailyAverageDryBulbTemperature, DailyPrecipitation) |> 
+  filter(!DailyPrecipitation == "Ts") |> 
+  mutate(DailyPrecipitation = ifelse(DailyPrecipitation == "T", 100, DailyPrecipitation)) |> 
+  mutate(DailyPrecipitation = ifelse(DailyPrecipitation == 100, 0, DailyPrecipitation)) |> 
+  mutate(Precip = as.numeric(DailyPrecipitation),
+         Temp = as.numeric(DailyAverageDryBulbTemperature))
+
+roa |> select(1,4,5) |> pivot_longer(-1) |> 
+  mutate(Date = as.Date(DATE)) |> 
+  ggplot(aes(x = Date, y = value))+
+  geom_point()+
+  facet_wrap(~name, scales = "free_y", ncol = 1)
+
+
+roa |> select(1,4,5) |> pivot_longer(-1) |> 
+  mutate(Date = as.Date(DATE)) |> 
+  mutate(year = year(Date)) |> 
+  group_by(year, name) |> 
+  summarise(min = min(value, na.rm = T),
+            mean = mean(value, na.rm = T),
+            median = median(value, na.rm = T),
+            max = max(value, na.rm = T)) |> 
+  rename(Var = name) |> 
+  ggplot(aes(x = year, y = median))+
+  geom_point()+
+  geom_errorbar(aes(ymin = min, ymax = max))+
+  geom_point(aes(y = mean), shape = 2)+
+  scale_y_log10()+
+  facet_wrap(~Var, scales = "free_y", ncol = 1)
+
+
+
+
+
+############ WVWA dam water level #########################
+
 # wvwa <- read.csv("C:/Users/dwh18/Downloads/CCR_water_levels_clean_1987_2023.csv")
 # 
-# 
 # ccr_dam_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/2/ea78dd541e089687af1f4c4b550bc9ca")
-# ccr_dam_git <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/refs/heads/ccre-dam-data-qaqc/ccre-waterquality_L1.csv") 
-# ccrdam <- rbind(ccr_dam_edi, ccr_dam_git) 
+# ccr_dam_git <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/refs/heads/ccre-dam-data-qaqc/ccre-waterquality_L1.csv")
+# ccrdam <- rbind(ccr_dam_edi, ccr_dam_git)
 
 
 
