@@ -710,11 +710,11 @@ Value on Y
 
 eems_summary |> 
   ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m,
-             #shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))
+             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))
              ))+
     geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
             alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
-  geom_point(shape = 21, size = 3) + 
+  geom_point( size = 3) + #shape = 21,
   geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
   facet_wrap(~Date, scales = "fixed", ncol = 7)+ 
   ylim(1.45,14.4)+
@@ -723,7 +723,7 @@ eems_summary |>
     labs(x= "Distance from Stream (m)",
        shape = "Site Type")+
   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
-  #scale_shape_manual(values = c(24, 22, 21, 25))+ 
+  scale_shape_manual(values = c(24, 22, 21, 25))+ 
   scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
 
