@@ -291,7 +291,9 @@ Get EEM data
 distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances.csv") |> 
   mutate(Date = mdy(Date)) |> 
   dplyr::select(-c(13,14)) |> 
-  pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft")
+  pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft") |> 
+  filter(!Site_code == "C1") 
+
 
 site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class.csv") |> 
   dplyr::select(-X, -Key) |> 
@@ -311,18 +313,9 @@ zz <- arrange(eems24, mdy(Date), desc(Site), Depth_m)
 
 
 eems <- eems24 |> 
-  # mutate(Distance_ft = ifelse(Site == 101, 0, NA),
-  #        Distance_ft = ifelse(Site == 100, 407, Distance_ft),
-  #        Distance_ft = ifelse(Site == 98, 619, Distance_ft),
-  #        Distance_ft = ifelse(Site == 96, 790, Distance_ft),
-  #        Distance_ft = ifelse(Site == 94, 1015, Distance_ft),
-  #        Distance_ft = ifelse(Site == 92, 1132, Distance_ft),
-  #        Distance_ft = ifelse(Site == 90, 1843, Distance_ft),
-  #        Distance_ft = ifelse(Site == 88, 3326, Distance_ft),
-  #        Distance_ft = ifelse(Site == 50, 5011, Distance_ft),
-  #        Distance = Distance_ft*0.3048) |> 
     mutate(Date = mdy(Date),
            Date = ifelse(Date == ymd("2024-08-15"), ymd("2024-08-14"), Date),
+           Date = ifelse(Date == ymd("2025-02-17"), ymd("2025-02-26"), Date),
            Date = as.Date(Date),
            Site_code = ifelse(Site == 101, "S1", NA),
          Site_code = ifelse(Site == 100, "S2", Site_code),
