@@ -230,14 +230,14 @@ stagedata_forjoin <- stagedata |>
 
 # Join data together for 4 variable plot
 CCR_usgs_data <- left_join(Qdata_forjoin, waterlevel_precip, by= "Date") |> 
-  #left_join(stagedata_forjoin, by = "Date") |> 
+  left_join(stagedata_forjoin, by = "Date") |> 
   rename(CCR_Dam_depth_m = dam_depth_m,
          CCR_MetStation_daily_rain_mm = Daily_rain_mm,
          CCR_HPB_daily_waterlevel_cm = HPB_Daily_waterlevel_cm,
          USGS_CatwabaCreek_dailyflow_cfs = Flow_02018500,
          USGS_TinkerCreek_dailyflow_cfs = Flow_02055100,
-         #USGS_CatwabaCreek_dailystage_ft = Stage_02018500,
-         #USGS_TinkerCreek_dailystage_ft = Stage_02055100
+         USGS_CatwabaCreek_dailystage_ft = Stage_02018500,
+         USGS_TinkerCreek_dailystage_ft = Stage_02055100
          ) |> 
   filter(Date > ymd("2024-04-15")) 
 
@@ -250,10 +250,10 @@ Plots
 
 faceted_hydro <- CCR_usgs_data |> 
   #filter(Date > ymd("2024-08-01")) |> 
-  #select(-USGS_CatwabaCreek_dailyflow_cfs) |> 
-  #select(-USGS_CatwabaCreek_dailystage_ft) |> 
-  select(-USGS_TinkerCreek_dailyflow_cfs) |> 
-  # select(-USGS_TinkerCreek_dailystage_ft) |> 
+  select(-USGS_CatwabaCreek_dailyflow_cfs) |>
+  select(-USGS_CatwabaCreek_dailystage_ft) |>
+  select(-USGS_TinkerCreek_dailyflow_cfs) |>
+  #select(-USGS_TinkerCreek_dailystage_ft) |> 
   pivot_longer(-1) |> 
   ggplot(aes(x = Date, y = value))+
   geom_point()+
@@ -477,7 +477,8 @@ eems24 <- read.csv("../EEMs_Results_2024.csv")
 
 S1_eems <- eems24 |> 
   mutate(Date = mdy(Date)) |> 
-  mutate(Date = ifelse(Date == ymd("2024-08-15"), ymd("2024-08-14"), Date)) |>
+  mutate(Date = ifelse(Date == ymd("2024-08-15"), ymd("2024-08-14"), Date),
+         Date = ifelse(Date == ymd("2025-02-17"), ymd("2025-02-26"), Date)) |>
   mutate(Date = as.Date(Date)) |> 
   filter(Site == 101) |> 
   group_by(Date) |> 
