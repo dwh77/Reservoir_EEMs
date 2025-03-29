@@ -9,10 +9,10 @@ output: html_document
 
 ```{r, include = F}
 library(tidyverse)
-library(ggpubr)
-library(colorRamps) #for heatmap
-library(RColorBrewer) #for heatmap 
-library(rLakeAnalyzer)
+# library(ggpubr)
+# library(colorRamps) #for heatmap
+# library(RColorBrewer) #for heatmap 
+# library(rLakeAnalyzer)
 # library(scales) #for date format on plots
 # library(patchwork) #arrange figures w/ slashes and lines
 # library(plotly)
@@ -74,7 +74,7 @@ Get CTD Data
 ```{r}
 
 ##read in EDI data (STAGED)
-ctd_edi <- read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/1113/14/bbd126d40b44abaeeb0d734009da9ae4" )
+ctd_edi <- read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/1113/14/bbd126d40b44abaeeb0d734009da9ae4" ) |> filter(Reservoir == "CCR")
 
 ### read in L data 
 ctd_L1 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/Raw_CTD/ctd_L1.csv")
@@ -85,34 +85,6 @@ ccr_ctd_24 <- plyr::rbind.fill(ctd_edi, ctd_L1) |>
   filter(Reservoir == "CCR") 
 
 ccr_ctd_24 <- ccr_ctd_clean(ccr_ctd_24)
-
-
-```
-
-
-
-## CCR ADCP plots 
-
-```{r}
-#all sites
-ccr_ctd_24 |> 
-  filter(Date == ymd("2024-08-15")) |> 
-  filter(Turbidity_NTU < 50) |> 
-  select(Site, Depth_m, Temp_C, DOsat_percent, SpCond_uScm, Chla_ugL, Turbidity_NTU, CDOM_ugL) |> 
-  pivot_longer(-c(1:2)) |> 
-  ggplot(aes(x = value, y = Depth_m))+
-  geom_line(orientation = "y")+  scale_y_reverse()+
-  facet_grid(Site~name, scales = "free")+  theme_bw()+ theme(text = element_text(size = 18))
-
-#C3
-ccr_ctd_24 |> 
-  filter(Date == ymd("2024-08-15"), Site == 90) |> 
-  filter(Turbidity_NTU < 50) |> 
-  select(Site, Depth_m, Temp_C, SpCond_uScm, Turbidity_NTU, CDOM_ugL) |> 
-  pivot_longer(-c(1:2)) |> 
-  ggplot(aes(x = value, y = Depth_m))+
-  geom_line(orientation = "y")+  scale_y_reverse()+
-  facet_grid(Site~name, scales = "free")+  theme_bw()+ theme(text = element_text(size = 18))
 
 
 ```
@@ -579,6 +551,33 @@ ggplot(interp_temp, aes(x=x, y=y))+
 #   labs(x = "distance", y = "Depth (m)", fill = "Temperature (°C)") +
 #   theme_minimal() + 
 #   scale_y_reverse()
+
+
+```
+
+
+## CCR ADCP plots 
+
+```{r}
+#all sites
+ccr_ctd_24 |> 
+  filter(Date == ymd("2024-08-15")) |> 
+  filter(Turbidity_NTU < 50) |> 
+  select(Site, Depth_m, Temp_C, DOsat_percent, SpCond_uScm, Chla_ugL, Turbidity_NTU, CDOM_ugL) |> 
+  pivot_longer(-c(1:2)) |> 
+  ggplot(aes(x = value, y = Depth_m))+
+  geom_line(orientation = "y")+  scale_y_reverse()+
+  facet_grid(Site~name, scales = "free")+  theme_bw()+ theme(text = element_text(size = 18))
+
+#C3
+ccr_ctd_24 |> 
+  filter(Date == ymd("2024-08-15"), Site == 90) |> 
+  filter(Turbidity_NTU < 50) |> 
+  select(Site, Depth_m, Temp_C, SpCond_uScm, Turbidity_NTU, CDOM_ugL) |> 
+  pivot_longer(-c(1:2)) |> 
+  ggplot(aes(x = value, y = Depth_m))+
+  geom_line(orientation = "y")+  scale_y_reverse()+
+  facet_grid(Site~name, scales = "free")+  theme_bw()+ theme(text = element_text(size = 18))
 
 
 ```

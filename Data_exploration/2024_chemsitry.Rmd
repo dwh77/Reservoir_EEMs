@@ -13,6 +13,27 @@ library(tidyverse)
 # library(patchwork) #arrange figures w/ slashes and lines
 # library(plotly)
 
+Site_code_number <- data.frame(Site_code = c("CS1", "CS2", "CP1", "CP2", "CC1", "CC2", "CC3", "CC4", "C50",
+                                             "B50", "F50", "F100"),
+                               Site_number = c(101, 100, 98, 96, 94, 92, 90, 88, 50, 50,50,100))
+
+## bring in distances and site class table from google sheets; have to redownload locally each time 
+distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances.csv") |> 
+  mutate(Date = mdy(Date)) |> 
+  dplyr::select(-c(13,14)) |> 
+  pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft") |> 
+  filter(!Site_code == "C1") 
+
+
+site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class.csv") |> 
+  dplyr::select(-X, -Key) |> 
+  mutate(Date = mdy(Date)) |> 
+  pivot_longer(-c(1), names_to = "Site_code", values_to = "Site_Class") |> 
+  mutate(Site_Class = ifelse(Site_Class %in% c("S", "S "), "Stream", Site_Class),
+         Site_Class = ifelse(Site_Class %in% c("P", "P "), "Pool", Site_Class),
+         Site_Class = ifelse(Site_Class == "C", "Cove", Site_Class),
+         Site_Class = ifelse(Site_Class == "L", "Pelagic", Site_Class))
+
 
 ```
 
@@ -21,9 +42,7 @@ library(tidyverse)
 Clean up data
 
 ```{r}
-Site_code_number <- data.frame(Site_code = c("CS1", "CS2", "CP1", "CP2", "CC1", "CC2", "CC3", "CC4", "C50"),
-                               Site_number = c(101, 100, 98, 96, 94, 92, 90, 88, 50))
-# 
+ 
 #### RUN 1 ####
 
 # doc1 <- read.csv("C:/Users/dwh18/OneDrive/Desktop/Alab_QAQC/2024/CCR_solubles1/ccr_doc1.csv")
@@ -96,6 +115,45 @@ Site_code_number <- data.frame(Site_code = c("CS1", "CS2", "CP1", "CP2", "CC1", 
 # 
 # write.csv(solublesA2, "./solubles2_v1.csv", row.names = F)
 
+#### RUN 3 ####
+# doc3 <- read.csv("./solubles3_v1.csv")
+# 
+# 
+# names3 <- doc3 |>
+#   select(Sample_ID) |>
+#       mutate(Name = Sample_ID) |>
+#     mutate(Name = sapply(Name, add_underscore)) |>  # add underscore between depth and rep
+#   separate(Name, into = paste0("part", 1:4), sep = "_", fill = "right") |> #break Name into four columns
+#   rename(Site_code = part1,
+#          Date = part2,
+#          Depth = part3,
+#          Rep = part4) |>  #give columns meaningful names
+#   mutate(Rep = ifelse(Rep %in% c("r1", "R1"), 1, 2)) |> #update rep values
+#   mutate(Depth_m = ifelse(Depth %in% c("01"), "0.1", NA),
+#          Depth_m = ifelse(Depth %in% c("15"), "1.5", Depth_m),
+#          Depth_m = ifelse(Depth %in% c("16"), "1.6", Depth_m),
+#          Depth_m = ifelse(Depth %in% c("38"), "3.8", Depth_m),
+#          Depth_m = ifelse(Depth %in% c("62"), "6.2", Depth_m),
+#          Depth_m = ifelse(Depth %in% c("6"), "6", Depth_m),
+#          Depth_m = ifelse(Depth %in% c("9"), "9", Depth_m),
+#          Depth_m = ifelse(Depth %in% c("20"), "20", Depth_m),
+#          Depth_m = ifelse(Depth %in% c("BOT"), "BOT", Depth_m)) |>  #update depths that are easy, will assign BOT manually later
+#  #  filter(str_starts(Sample_ID, "C")) |> #get only CCr samples
+#   mutate(first_character = substr(Sample_ID, 1, 1)) |> 
+#   mutate(Reservoir = ifelse(first_character == "F", "FCR", NA),
+#          Reservoir = ifelse(first_character == "B", "BVR", Reservoir),
+#          Reservoir = ifelse(first_character == "C", "CCR", Reservoir)) |> 
+#   mutate(Date = dmy(Date)
+#          #Reservoir = "CCR"
+#          ) |>
+#   left_join(Site_code_number, by = "Site_code") |>
+#   select(Reservoir, Site_code, Site_number, Depth_m, Date, Rep, Sample_ID)
+# 
+# solubles3_v2 <- left_join(names3, doc3, by = "Sample_ID")
+# 
+# write.csv(solubles3_v2, "./solubles3_v2_b.csv", row.names = F)
+
+
 
 
 ```
@@ -109,7 +167,9 @@ ccr_solubles1 <- read.csv("./solubles1_v2.csv")
 ccr_solubles2 <- read.csv("./solubles2_v2.csv") |> 
   rename(NH4 = 14, PO4 = 15, NO3 = 16)
 
-ccr_solubles <- rbind(ccr_solubles1, ccr_solubles2)|> 
+doc3 <- read.csv("./solubles3_v3_b.csv")
+
+ccr_solubles <- plyr::rbind.fill(ccr_solubles1, ccr_solubles2, doc3) |> 
   mutate(NO3 = ifelse(NO3 < 0, 0, NO3),
          NH4 = ifelse(NH4 < 0, 0, NH4),
          PO4 = ifelse(PO4 < 0, 0, PO4)) |> 
@@ -119,6 +179,7 @@ ccr_solubles <- rbind(ccr_solubles1, ccr_solubles2)|>
   mutate(Site_code = substr(Site_code, 2, nchar(Site_code))) |> 
   mutate(Site_code = ifelse(Site_code =="50", "C50", Site_code)) |> 
   mutate(Date = ifelse(Date == ymd("2024-08-15"), ymd("2024-08-14"), Date),
+         Date = ifelse(Date == ymd("2025-02-17"), ymd("2025-02-26"), Date),
          Date = as.Date(Date)) 
 
   
@@ -129,12 +190,29 @@ solubles_plotting <- left_join(ccr_solubles, distances, by = c("Site_code", "Dat
          Dry_start = Dry_start*0.3048,
          Dry_end = Dry_end*0.3048) |> 
   filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
-  rename(DOC = 10,
+  rename(DOC = 10, DIC = 8, DC = 9,
          Site = Site_number) |> 
-  select(Reservoir, Site, Site_code, Site_Class, Depth_m, Date, Rep, Distance, Dry_start, Dry_end, DOC, NO3, NH4, PO4 )
+  select(Reservoir, Site, Site_code, Site_Class, Depth_m, Date, Rep, Distance, Dry_start, Dry_end, DOC, DIC, DC, NO3, NH4, PO4,  Run_date)
 
 
 ```
+
+
+TESTS
+
+```{r}
+
+solubles_plotting |> 
+  ggplot(aes(x = Date, y = DOC, color = Run_date))+
+  geom_point()+
+  facet_grid(Reservoir~Site)
+
+
+
+```
+
+
+
 
 plot it! 
 
@@ -287,24 +365,6 @@ solubles_summary |>
 Get EEM data 
 
 ```{r}
-## bring in distances and site class table from google sheets; have to redownload locally each time 
-distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances.csv") |> 
-  mutate(Date = mdy(Date)) |> 
-  dplyr::select(-c(13,14)) |> 
-  pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft") |> 
-  filter(!Site_code == "C1") 
-
-
-site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class.csv") |> 
-  dplyr::select(-X, -Key) |> 
-  mutate(Date = mdy(Date)) |> 
-  pivot_longer(-c(1), names_to = "Site_code", values_to = "Site_Class") |> 
-  mutate(Site_Class = ifelse(Site_Class %in% c("S", "S "), "Stream", Site_Class),
-         Site_Class = ifelse(Site_Class %in% c("P", "P "), "Pool", Site_Class),
-         Site_Class = ifelse(Site_Class == "C", "Cove", Site_Class),
-         Site_Class = ifelse(Site_Class == "L", "Pelagic", Site_Class))
-
-
 
 ## EEM data
 eems24 <- read.csv("../EEMs_Results_2024.csv")
@@ -443,14 +503,11 @@ head(solubles_summary)
 head(CCR_usgs_data)
 head(sensors)
 
-data <- sensors |> 
-  select(Site, Date, Depth_m, Temp_C:SpCond_uScm) |> 
-  full_join(eems_summary, by = c("Site", "Date", "Depth_m")) |> 
-  full_join(solubles_summary, by = c("Site", "Date", "Depth_m", "Site_Class", "Distance", "Dry_start", "Dry_end")) |>   left_join(CCR_usgs_data, by = "Date")
-
 # data <- eems_summary
 
-data2 <- plyr::rbind.fill(sensors, eems_summary, solubles_summary)
+data2 <- plyr::rbind.fill(eems_summary, solubles_summary, sensors) |> 
+    mutate(SpCond_uScm = ifelse(SpCond_uScm > 200, NA, SpCond_uScm) ) 
+
 
 
 ```
@@ -485,11 +542,12 @@ ggsave("./igc25_figures/waterlevel.png", igc_wl, height = 6.5, width = 11, units
 #################### HIX and DOC
 
 #HIX
-igc_hix <- data |> 
+igc_hix <- data2 |> 
+   # filter(Date < ymd("2024-12-01")) |> 
   ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
   geom_smooth()+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 28),
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 36),
                     legend.text = element_text(size=18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
     labs(x= "Distance from Stream (m)", y = "HIX",
@@ -499,11 +557,12 @@ igc_hix <- data |>
                        midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))
 
 #DOC
-igc_doc <- data |> 
+igc_doc <- data2 |> 
+  #filter(Date < ymd("2024-12-01")) |> 
   ggplot(aes(x = Distance, y = DOC_mean, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
   geom_smooth()+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 28),
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 36),
                     legend.text = element_text(size=18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
     labs(x= "Distance from Stream (m)", y = "DOC (mg/L)",
@@ -515,20 +574,35 @@ igc_doc <- data |>
 
 igc_doc_hix <- ggpubr::ggarrange(igc_doc, igc_hix, nrow = 1, labels = "auto", font.label = list(size = 28))
 
-ggsave("./igc25_figures/DOC_HIX.png", igc_doc_hix, height = 8.5, width = 21, units = "in")
+ggsave("./igc25_figures/DOC_HIX2.png", igc_doc_hix, height = 8.5, width = 21, units = "in")
 
+
+data2 |> 
+  ggplot(aes(x = Distance, y = SpCond_uScm, fill = Depth_m))+
+  geom_point(shape = 21, size = 4) + #shape = 21,
+  geom_smooth()+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 28),
+                    legend.text = element_text(size=18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    labs(x= "Distance from Stream (m)", y = "Sp. Cond (uS/cm)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))
 
 ######### variables by date 
 igc_dates <- data2 |> 
-  filter(SpCond_uScm < 200) |> 
-  select(Site, Date, Depth_m, Site_Class, Distance, Dry_start, Dry_end, Temp_C, SpCond_uScm, DOC_mean, HIX_mean) |> 
+  #filter(Date %in% c(ymd("2024-05-22"), ymd("2024-08-14"), ymd("2024-09-16"), ymd("2024-09-30"), ymd("2024-10-28"))) |> 
+  select(Site, Date, Depth_m, Site_Class, Distance, Dry_start, Dry_end, 
+          Temp_C, SpCond_uScm, DO_mgL, DOC_mean, HIX_mean) |> 
+  rename(DOC_mgL = DOC_mean, HIX = HIX_mean) |> 
   pivot_longer(-c(1:7)) |> 
   ggplot(aes(x = Distance, y = value, fill = Depth_m,
              #shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))
              ))+
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
             alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
-  facet_grid(factor(name, levels = c("Temp_C", "SpCond_uScm", "DOC_mean", "HIX_mean"))~Date, scales = "free_y")+
+  facet_grid(factor(name, levels = c("Temp_C", "SpCond_uScm", "DO_mgL", "DOC_mgL", "HIX"))~Date, scales = "free_y")+
   geom_point(shape = 21, size = 6)+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 40),
                     legend.text = element_text(size=24),
@@ -540,9 +614,36 @@ igc_dates <- data2 |>
   scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
 
-ggsave("./igc25_figures/acrossdates.png", igc_dates, height = 20, width = 21, units = "in")
+ggsave("./igc25_figures/acrossdates_zz.png", igc_dates, height = 18, width = 21, units = "in")
+
+
+ data2 |> 
+  select(Site, Date, Depth_m, Site_Class, Distance, Dry_start, Dry_end, 
+          DOC_mean, HIX_mean) |> 
+  rename(DOC_mgL = DOC_mean, HIX = HIX_mean) |> 
+  pivot_longer(-c(1:7)) |> 
+  ggplot(aes(x = Distance, y = value, fill = Depth_m       ))+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
+  facet_grid(factor(name, levels = c("Temp_C", "SpCond_uScm", "DO_mgL", "DOC_mgL", "HIX"))~Date, scales = "free_y")+
+  geom_point(shape = 21, size = 4)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 15),
+                    legend.text = element_text(size=15),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
 
   
+ccr_dam |> 
+  filter(DateTime > ymd("2024-05-01")) |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  group_by(Date) |> 
+  summarise(chla = mean(EXOChla_ugL_1, na.rm = T)) |> 
+  ggplot(aes(x = Date, y = chla))+geom_point() +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b")
 
 
 ```
@@ -805,6 +906,7 @@ Value on Y
 
 ```{r}
 
+#by date
 eems_summary |> 
   ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m,
              shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))
@@ -815,6 +917,22 @@ eems_summary |>
   geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
   facet_wrap(~Date, scales = "fixed", ncol = 7)+ 
   ylim(1.45,14.4)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  scale_shape_manual(values = c(24, 22, 21, 25))+ 
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
+
+
+#across dates
+eems_summary |> 
+  ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m,
+             ))+
+  geom_point(shape = 21, size = 3) + #shape = 21,
+  geom_smooth()+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
     labs(x= "Distance from Stream (m)",
