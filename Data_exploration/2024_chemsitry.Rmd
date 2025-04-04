@@ -220,6 +220,7 @@ plot it!
 #summarize
 ## something going wrong in here
 solubles_summary <- solubles_plotting |>
+  filter(Reservoir == 'CCR') |> 
   select(Site, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, DOC, NO3, NH4, PO4) |>
   group_by(Site, Site_Class, Depth_m, Date, Dry_start, Dry_end, Distance) |>
   summarise(DOC_mean = mean(DOC, na.rm = T),
@@ -452,16 +453,24 @@ eems_summary <- eems_plotting |>
   filter(!NOTES %in% c("PART")) |> 
   filter(Site_code != "C1") |> 
   rename(HIX = HIX.,
-         BIX = BIX.) |>  #### can just change the rename here for what value you want to look at
-  dplyr::select(Site, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, HIX, BIX) |> 
+         BIX = BIX.,
+         FI = FI.,
+         A = A.,
+         peakT = T.,
+         AT = A.T.) |>  #### can just change the rename here for what value you want to look at
+  dplyr::select(Site, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, HIX, BIX, FI, A, peakT, AT) |> 
   group_by(Site, Site_Class, Depth_m, Date, Dry_start, Dry_end, Distance) |> 
   summarise(HIX_mean = mean(HIX, na.rm = T),
             HIX_min = min(HIX, na.rm = T),
             HIX_max = max(HIX, na.rm = T),
             BIX_mean = mean(BIX, na.rm = T),
             BIX_min = min(BIX, na.rm = T),
-            BIX_max = max(BIX, na.rm = T)
-                        ) |> 
+            BIX_max = max(BIX, na.rm = T),
+            FI_mean = mean(FI, na.rm = T),
+            A_mean = mean(A, na.rm = T),
+            T_mean = mean(peakT, na.rm = T),
+            AT_mean = mean(AT, na.rm = T)
+            ) |> 
   mutate(Rep = ifelse(HIX_mean != HIX_min, "Y", "N"))
 
 zzz <- arrange(eems_summary, Date, desc(Site), Depth_m)
@@ -509,30 +518,137 @@ data2 <- plyr::rbind.fill(eems_summary, solubles_summary, sensors) |>
     mutate(SpCond_uScm = ifelse(SpCond_uScm > 200, NA, SpCond_uScm) ) 
 
 
+chemjoin <- full_join(eems_summary, solubles_summary, by = c("Site", "Site_Class", "Depth_m", "Date", "Distance"))
+
+
+```
+
+exploration re WMWs comments 
+
+```{r}
+######### look at thermistor strat
+# ccr_L1 <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data-qaqc/ccre-waterquality_L1.csv")
+# ccr_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/3/4afb209b30ebed898334badd3819d854")
+# ccrfull <- rbind(ccr_edi, ccr_L1)
+# 
+# thermistors <- ccrfull |> 
+#   select(3:16) |> 
+#   filter(DateTime > ymd_hms("2024-04-15 00:00:00")) |> 
+#   pivot_longer(-1) |> 
+#   ggplot(aes(x= DateTime, y = value, color = name))+
+#   geom_line()+ geom_vline(xintercept = ymd_hms("2024-05-22 00:00:00"))+ geom_vline(xintercept = ymd_hms("2024-06-19 00:00:00"))+ geom_vline(xintercept = ymd_hms("2024-07-11 00:00:00"))+ geom_vline(xintercept = ymd_hms("2024-08-14 00:00:00"))+ geom_vline(xintercept = ymd_hms("2024-09-16 00:00:00"))+ 
+#       geom_vline(xintercept = ymd_hms("2024-09-30 00:00:00"))+  geom_vline(xintercept = ymd_hms("2024-10-28 00:00:00"))+  geom_vline(xintercept = ymd_hms("2024-12-17 00:00:00"))+  geom_vline(xintercept = ymd_hms("2025-02-26 00:00:00"))
+# 
+# thermistors
+# plotly::ggplotly(thermistors)
+
 
 ```
 
 
-IGC poster plots 
+```{r}
+
+## EEMs and DOC
+chemjoin |> 
+  ungroup() |> 
+  select(Site, Depth_m, Date, Distance, HIX_mean, BIX_mean, DOC_mean, FI_mean, A_mean, T_mean, AT_mean) |> 
+  pivot_longer(-c(1:4)) |> 
+  ggplot(aes(x = Distance, y = value, fill = Depth_m))+
+  geom_point(shape = 21, size = 4) + #shape = 21,
+  facet_grid(name~Date, scales = "free_y")+ theme_bw()+  theme(legend.position = "top", 
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))
+
+
+
+### HIX ~ DOC ####
+chemjoin |> 
+   # filter(Date < ymd("2024-12-01")) |> 
+  ggplot(aes(x = DOC_mean, y = HIX_mean, color = Depth_m))+
+  geom_point() + #shape = 21,
+  theme_bw()+ 
+    labs(x= "DOC", y = "HIX")+
+  scale_color_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))
+
+chemjoin |> 
+   # filter(Date < ymd("2024-12-01")) |> 
+  ggplot(aes(x = DOC_mean, y = HIX_mean, color = as.factor(Date)))+
+  geom_point() + #shape = 21,
+  theme_bw()+ 
+    labs(x= "DOC", y = "HIX")
+
+
+chemjoin |> 
+   # filter(Date < ymd("2024-12-01")) |> 
+  ggplot(aes(x = DOC_mean, y = HIX_mean, color = (Distance)))+
+  geom_point() + #shape = 21,
+  theme_bw()+ 
+    labs(x= "DOC", y = "HIX")+
+  scale_color_viridis_c()
+
+
+### BIX ~ DOC ###
+chemjoin |> 
+   # filter(Date < ymd("2024-12-01")) |> 
+  ggplot(aes(x = DOC_mean, y = BIX_mean, color = as.factor(Date)))+
+  geom_point() + #shape = 21,
+  theme_bw()+ 
+    labs(x= "DOC", y = "BIX")
+
+
+
+### facet by site ###
+chemjoin |> 
+  ungroup() |> 
+  dplyr::select(Site, Date, DOC_mean, HIX_mean) |> 
+  pivot_longer(-c(1:2)) |> 
+  ggplot(aes(x = Date, y = value, color = as.factor(Date)))+
+  geom_point()+ theme(legend.position = "top")+
+  facet_grid(name~factor(Site, levels = c(101,100,98,96,92,90,88,50)))
+
+
+######### look at DOC at 98 and 96 in dec and feb; think cool under/overflow may be happening in FEB at P2
+decfeb <- data2 |> 
+  select(Site, Date, Depth_m, Site_Class, Distance, Dry_start, Dry_end, 
+          DOC_mean, HIX_mean) |> 
+  rename(DOC_mgL = DOC_mean, HIX = HIX_mean) |> 
+  filter(Date %in% c(ymd("2024-12-17"), ymd("2025-02-26"))) |> 
+  pivot_longer(-c(1:7)) |> 
+  ggplot(aes(x = Distance, y = value, fill = Depth_m       ))+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
+  facet_grid(factor(name, levels = c("Temp_C", "SpCond_uScm", "DO_mgL", "DOC_mgL", "HIX"))~Date, scales = "free_y")+
+  geom_point(shape = 21, size = 3)+
+  theme_bw()+ 
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
+  scale_x_log10()+
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
+
+decfeb
+# plotly::ggplotly(decfeb)
+
+```
+
+
+
+
+IGC talk
 
 ```{r}
 
 ######## water level
-igc_wl <- CCR_usgs_data |> 
-  ggplot(aes(x = Date, y = CCR_Dam_depth_m))+
-  geom_point(size = 3)+
-  geom_vline(xintercept = ymd("2024-05-22"), linetype = 2, linewidth = 1)+ 
-  geom_vline(xintercept = ymd("2024-06-19"), linetype = 2, linewidth = 1)+
-  geom_vline(xintercept = ymd("2024-07-11"), linetype = 2, linewidth = 1)+  
-  geom_vline(xintercept = ymd("2024-08-14"), linetype = 2, linewidth = 1)+ 
-  geom_vline(xintercept = ymd("2024-09-16"), linetype = 2, linewidth = 1)+  
-  geom_vline(xintercept = ymd("2024-09-30"), linetype = 2, linewidth = 1)+ 
-  geom_vline(xintercept = ymd("2024-10-28"), linetype = 2, linewidth = 1)+ 
-  geom_vline(xintercept = ymd("2024-12-17"), linetype = 2, linewidth = 1)+  
-  geom_vline(xintercept = ymd("2025-02-26"), linetype = 2, linewidth = 1)+
-  scale_x_date(breaks = "2 months", date_labels = "%b")+
-  labs(x= element_blank(), y = "Reservoir Water Level (m)")+
-  theme_bw()+ theme(text = element_text(size = 36),
+igc_wl <- #CCR_usgs_data |> 
+  waterlevel_precip |> rename(CCR_Dam_depth_m = dam_depth_m) |> filter(Date > ymd("2024-04-15")) |> 
+  ggplot(aes(x = Date, y = CCR_Dam_depth_m))+  geom_point(size = 3)+
+  geom_vline(xintercept = ymd("2024-05-22"), linetype = 2, linewidth = 1)+   geom_vline(xintercept = ymd("2024-06-19"), linetype = 2, linewidth = 1)+
+  geom_vline(xintercept = ymd("2024-07-11"), linetype = 2, linewidth = 1)+    geom_vline(xintercept = ymd("2024-08-14"), linetype = 2, linewidth = 1)+ 
+  geom_vline(xintercept = ymd("2024-09-16"), linetype = 2, linewidth = 1)+    geom_vline(xintercept = ymd("2024-09-30"), linetype = 2, linewidth = 1)+ 
+  geom_vline(xintercept = ymd("2024-10-28"), linetype = 2, linewidth = 1)+   geom_vline(xintercept = ymd("2024-12-17"), linetype = 2, linewidth = 1)+  
+  geom_vline(xintercept = ymd("2025-02-26"), linetype = 2, linewidth = 1)+  scale_x_date(breaks = "3 months", date_labels = "%b %Y")+
+  labs(x= element_blank(), y = "Reservoir Water Level (m)")+  theme_bw()+ theme(text = element_text(size = 28),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 ggsave("./igc25_figures/waterlevel.png", igc_wl, height = 6.5, width = 11, units = "in")
@@ -650,124 +766,83 @@ ccr_dam |>
 
 
 
-make some plots 
+
+## EEMs plots by distance, value on Y
+
+Value on Y
 
 ```{r}
 
-#all data by depth
-data |> 
-  ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m
+#by date
+eems_summary |> 
+  ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m,
+             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))
              ))+
-  geom_smooth()+
-  geom_point(shape = 21, size = 3) + 
+    geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
+  geom_point( size = 3) + #shape = 21,
   geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
+  facet_wrap(~Date, scales = "fixed", ncol = 7)+ 
   ylim(1.45,14.4)+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x= "Distance from Stream (m)",  fill = "Depth (m)", y = "HIX")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+  
+    labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  scale_shape_manual(values = c(24, 22, 21, 25))+ 
   scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
 
-#all depths by date
-data |> 
-  mutate(Julian = yday(Date)) |> 
-  ggplot(aes(x = Distance, y = HIX_mean, color = (Julian)
+
+#across dates
+eems_summary |> 
+  ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m,
              ))+
+  geom_point(shape = 21, size = 3) + #shape = 21,
   geom_smooth()+
-  geom_point(size = 3) + 
-  ylim(1.45,14.4)+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x= "Distance from Stream (m)",  shape = "Site Type")+
+    labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  scale_shape_manual(values = c(24, 22, 21, 25))+ 
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
+
+
+
+```
+
+Trying depth on Y 
+
+```{r}
+
+# maxdepth_df <- eems_summary |> 
+#   group_by(Site, Date) |> 
+#   summarise(max_depth = max(Depth_m) + 0.2)
+
+summary(eems_summary$HIX_mean)
+
+## trial 1 
+eems_summary |> 
+  group_by(Site, Date) |> 
+  mutate(max_depth = max(Depth_m) + 0.5) |> 
+  ggplot(aes(x = Distance, y = Depth_m , fill = HIX_mean))+
+    geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
+  geom_point(shape = 21, color = "black", size = 3) + 
+   geom_line(aes(y = max_depth), color = "black")+
+   geom_hline(yintercept = -0.5)+
+  scale_y_reverse()+
+  scale_y_continuous(trans = ggforce::trans_reverser('log10')) +
+  facet_wrap(~Date, scales = "fixed", ncol = 7)+ 
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+
-  scale_color_viridis_b(breaks = c(100,200,300))
-
-
-#just 0.1 m 
-data |> 
-  filter(Depth_m == 0.1) |> 
-  ggplot(aes(x = Distance, y = HIX_mean, color = as.factor(Date)
-             ))+
-  geom_point() + 
-  geom_line()+
-  ylim(1.45,14.4)+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x= "Distance from Stream (m)",  shape = "Site Type")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))
-
-
-#averaged across depths BY DATE
-data |> 
-  group_by(Date, Site, Distance) |> 
-  summarise(HIX_mean_depth = mean(HIX_mean, na.rm = T),
-            HIX_min = min(HIX_mean, na.rm = T),
-            HIX_max = max(HIX_mean, na.rm = T)) |> 
-  ggplot(aes(x = Distance, y = HIX_mean_depth, color = as.factor(Date)
-             ))+
-  geom_point() + 
-  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
-  ylim(1.45,14.4)+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x= "Distance from Stream (m)",  shape = "Site Type")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))
-
-
-# #averaged across depths BY Cond
-# data |> 
-#   group_by(Date, Site, Distance, SpCond_uScm) |> 
-#   summarise(HIX_mean_depth = mean(HIX_mean, na.rm = T),
-#             HIX_min = min(HIX_mean, na.rm = T),
-#             HIX_max = max(HIX_mean, na.rm = T)) |> 
-#   ggplot(aes(x = Distance, y = HIX_mean_depth, color = SpCond_uScm
-#              ))+
-#   geom_point() + 
-#   geom_smooth()+
-#   geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
-#   ylim(1.45,14.4)+
-#   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
-#                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-#   labs(x= "Distance from Stream (m)",  shape = "Site Type")+
-#   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+
-#     scale_color_gradient(low = "red",  high ="blue")
-
-
-#averaged across depths BY STAGE
-summary(data$CCR_HPB_daily_waterlevel_cm)
-
-data |> 
-  group_by(Date, Site, Distance, CCR_HPB_daily_waterlevel_cm) |> 
-  summarise(HIX_mean_depth = mean(HIX_mean, na.rm = T),
-            HIX_min = min(HIX_mean, na.rm = T),
-            HIX_max = max(HIX_mean, na.rm = T)) |> 
-  ggplot(aes(x = Distance, y = HIX_mean_depth, fill = CCR_HPB_daily_waterlevel_cm
-             ))+
-  geom_smooth()+
-  geom_point(shape = 21, size = 3) + 
-  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
-  ylim(1.45,14.4)+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x= "Distance from Stream (m)",  fill = "Stream Water Level (cm)", y = "HIX")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+
-    scale_fill_gradient2(low = "red",  high ="blue", midpoint = 7)
-
-#stage all data
-data |> 
-  ggplot(aes(x = Distance, y = HIX_mean, fill = CCR_HPB_daily_waterlevel_cm
-             ))+
-  geom_smooth()+
-  geom_point(shape = 21, size = 3) + 
-  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
-  ylim(1.45,14.4)+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x= "Distance from Stream (m)",  fill = "Stream Water Level (cm)", y = "HIX")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+
-    scale_fill_gradient2(low = "red",  high ="blue", midpoint = 7)
-
+    scale_fill_gradient(low = "green",  high ="brown",# midpoint = 5,
+                         guide = "colourbar", breaks = c(1,3,5,7,9,11,13))
 
 
 
@@ -829,356 +904,6 @@ merged_df |>
                        midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
   
 
-
-```
-
-
-
-## EEMs plots by distance, value on Y
-
-Trying depth on Y 
-
-```{r}
-
-# maxdepth_df <- eems_summary |> 
-#   group_by(Site, Date) |> 
-#   summarise(max_depth = max(Depth_m) + 0.2)
-
-summary(eems_summary$HIX_mean)
-
-## trial 1 
-eems_summary |> 
-  group_by(Site, Date) |> 
-  mutate(max_depth = max(Depth_m) + 0.5) |> 
-  ggplot(aes(x = Distance, y = Depth_m , fill = HIX_mean))+
-    geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
-            alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
-  geom_point(shape = 21, color = "black", size = 3) + 
-   geom_line(aes(y = max_depth), color = "black")+
-   geom_hline(yintercept = -0.5)+
-  scale_y_reverse()+
-  # geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
-  facet_wrap(~Date, scales = "fixed", ncol = 7)+ 
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-    labs(x= "Distance from Stream (m)",
-       shape = "Site Type")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+
-    scale_fill_gradient(low = "green",  high ="brown",# midpoint = 5,
-                         guide = "colourbar", breaks = c(1,3,5,7,9,11,13))
-  # scale_color_gradient2(low = "red",  high ="blue",
-  #                      midpoint = 5,  guide = "colourbar", breaks = c(0,2,4,6,8,10,12))
-
-
-
-
-##T2
-eems_summary |> 
-  #filter(Site > 50) |> 
-  group_by(Site, Date) |> 
-  mutate(max_depth = max(Depth_m) + 0.5) |> 
-  ggplot(aes(x = Distance, y = Depth_m, fill = HIX_mean))+
-  geom_point(shape = 21, color = "black", size = 3) + 
-  geom_line(aes(y = max_depth), color = "black")+
-  geom_hline(yintercept = -0.5)+
-  # scale_y_log10()+
-  scale_y_continuous(trans = ggforce::trans_reverser('log10')) +
-  #scale_y_reverse()+
-  # geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
-  facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
-  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
-            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-    labs(x= "Distance from Stream (m)",
-       shape = "Site Type")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+
-    scale_fill_gradient(low = "green",  high ="brown",# midpoint = 5,
-                         guide = "colourbar", breaks = c(1,3,5,7,9,11,13))
-
-
-
-
-
-```
-
-Value on Y
-
-```{r}
-
-#by date
-eems_summary |> 
-  ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m,
-             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))
-             ))+
-    geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
-            alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
-  geom_point( size = 3) + #shape = 21,
-  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
-  facet_wrap(~Date, scales = "fixed", ncol = 7)+ 
-  ylim(1.45,14.4)+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-    labs(x= "Distance from Stream (m)",
-       shape = "Site Type")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
-  scale_shape_manual(values = c(24, 22, 21, 25))+ 
-  scale_fill_gradient2(low = "red",  high ="blue",
-                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
-
-
-#across dates
-eems_summary |> 
-  ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m,
-             ))+
-  geom_point(shape = 21, size = 3) + #shape = 21,
-  geom_smooth()+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-    labs(x= "Distance from Stream (m)",
-       shape = "Site Type")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
-  scale_shape_manual(values = c(24, 22, 21, 25))+ 
-  scale_fill_gradient2(low = "red",  high ="blue",
-                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
-
-
-
-```
-
-
-
-
-Depth by gradient  
-
-```{r}
-#HIX averaging reps 
-eems_summary |> 
-  ggplot(aes(x = Distance, y = HIX_mean, color = Depth_m, fill = Depth_m,
-             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
-  geom_point() + 
-  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
-  facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
-  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
-            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
-  ylim(1.45,14.4)+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
-    labs(x= "Distance from Stream (m)",
-       shape = "Site Type")+
-  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
-  scale_color_gradient(high = "#CFCFCF", low = "black", breaks = c(3,6,9,12))+
-  scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
-
-
-#BIX averaging reps 
-eems_summary |> 
-  ggplot(aes(x = Distance, y = BIX_mean, color = Depth_m, fill = Depth_m,
-             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
-  geom_point() + 
-  geom_errorbar(aes(ymin = BIX_min, ymax = BIX_max), width = 2) +
-  facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
-  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
-            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
-  ylim(0.51, 0.89)+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
-    labs(x= "Distance from Stream (m)",
-       shape = "Site Type")+
-  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
-  scale_color_gradient(high = "#CFCFCF", low = "black", breaks = c(3,6,9,12))+
-  scale_fill_gradient(high = "#CFCFCF", low = "black",  breaks = c(3,6,9,12)) # high = "black", low = "#CFCFCF"  ;  high = "red", low = "blue"
-
-
-
-##adpating sensors new color 
-
-eems_summary |> 
-  ggplot(aes(x = Distance, y = HIX_mean, color = Depth_m, fill = Depth_m,
-             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
-  geom_point() + 
-  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
-  facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
-  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
-            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
-  ylim(1.45,14.4)+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-    labs(x= "Distance from Stream (m)",
-       shape = "Site Type")+
-  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
-    scale_color_gradient2(low = "#333333", mid = "#7A7A7A", high ="#E5E5E5",
-                       midpoint = 2,  guide = "colourbar", breaks = c(3,6,9, 15, 20))+
-  scale_fill_gradient2(low = "#333333", mid = "#7A7A7A", high ="#E5E5E5",
-                       midpoint = 2,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
-
-
-## Red to blue color pallet
-eems_summary |> 
-  ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m,
-             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
-  geom_point() + 
-  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
-  facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
-  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
-            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
-  ylim(1.45,14.4)+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-    labs(x= "Distance from Stream (m)",
-       shape = "Site Type")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
-  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
-  scale_fill_gradient2(low = "red",  high ="blue",
-                       midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
-
-
-eems_summary |> 
-  ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m,
-             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
-  geom_point() + 
-  geom_errorbar(aes(ymin = BIX_min, ymax = BIX_max), width = 2) +
-  facet_wrap(~Date, scales = "fixed", ncol = 4)+ 
-  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
-            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
-  ylim(0.51, 0.89)+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-    labs(x= "Distance from Stream (m)",
-       shape = "Site Type")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
-  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
-  scale_fill_gradient2(low = "red",  high ="blue",
-                       midpoint = 9,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
-
-
-```
-
-Depth by group
-
-```{r}
-
-#averaging reps  AND TRYING DEPTH SHAPE GROUPS
-levels_depthgroup <- c("0.1m", "0.2 - 1m",  "1 - 2m", "3 - 7m", "9m", " >= 10m")
-
-#HIX
-eems_summary |> 
-  mutate(depth_group = ifelse(Depth_m == 0.1, "0.1m", NA),
-         depth_group = ifelse(Depth_m <= 1 & Depth_m > 0.1, "0.2 - 1m", depth_group),
-         depth_group = ifelse(Depth_m <= 2 & Depth_m > 1, "1 - 2m", depth_group),
-         depth_group = ifelse(Depth_m <= 7 & Depth_m >= 3, "3 - 7m", depth_group),
-         depth_group = ifelse(Depth_m == 9 , "9m", depth_group),
-         depth_group = ifelse(Depth_m >= 10 , " >= 10m", depth_group)
-         ) |> 
-  ggplot(aes(x = Distance, y = HIX_mean, color = factor(depth_group, levels = levels_depthgroup))) +
-  geom_point() + 
-  geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
-  facet_wrap(~Date, nrow = 4)+
-  facet_wrap(~Date, scales = "fixed", ncol = 6)+ 
-  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = 2, ymax = 2.5), # for BIX use 0.5 and 0.51
-             alpha = 0.1, fill = "blue" )+
-  labs(color = "Depth", y = "HIX")+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+ guides(colour = guide_legend(nrow = 1))
-
-#BIX
-eems_summary |> 
-  mutate(depth_group = ifelse(Depth_m == 0.1, "0.1m", NA),
-         depth_group = ifelse(Depth_m <= 1 & Depth_m > 0.1, "0.2 - 1m", depth_group),
-         depth_group = ifelse(Depth_m <= 2 & Depth_m > 1, "1 - 2m", depth_group),
-         depth_group = ifelse(Depth_m <= 7 & Depth_m >= 3, "3 - 7m", depth_group),
-         depth_group = ifelse(Depth_m == 9 , "9m", depth_group),
-         depth_group = ifelse(Depth_m >= 10 , " >= 10m", depth_group)
-         ) |> 
-  ggplot(aes(x = Distance, y = BIX_mean, color = factor(depth_group, levels = levels_depthgroup))) +
-  geom_point() + 
-  geom_errorbar(aes(ymin = BIX_min, ymax = BIX_max), width = 2) +
-  facet_wrap(~Date, nrow = 4)+
-  facet_wrap(~Date, scales = "fixed", ncol = 2)+ 
-  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = 0.5, ymax = 0.51), # for BIX use 0.5 and 0.51
-             alpha = 0.1, fill = "blue" )+
-  labs(color = "Depth", y = "BIX")+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+ guides(colour = guide_legend(nrow = 1))
-
-
-```
-
-
-
-## by Codes 
-
-```{r}
-##previous style plot
-levels_sites <- c(101, 100, 98, 96, 94, 92, 90, 88, 50)
-levels_sites_code <- c("S1", "S2", "P1", "P2", "C1", "C2", "C3", "C4", "50")
-
-
-# set up colors for factored depths 
-depths <- c(0.1, 0.5, 1, 1.5, 2, 6)
-colors <- scales::seq_gradient_pal(low = "blue", high = "#ff0000", space = "Lab")(1:6/6)
-color_values <- setNames(colors, depths)
-
-## HIX and BIX by date w/ depth as specific color 
-eems_plotting |> 
-  select(Reservoir, Site, Site_code, Depth_m, Date, Distance, FI., HIX., BIX.) |> 
-  pivot_longer(-c(1:6)) |> 
-  # ggplot(aes(x = factor(Site, level = levels_sites), y = value, color = factor(Depth_m)))+
-  ggplot(aes(x = factor(Site_code, level = levels_sites_code), y = value, color = factor(Depth_m)))+
-  geom_jitter(size = 2.5, width = 0.1)+
-  facet_wrap(~name, nrow = 3, scales = "free_y")+
-  # labs(title = "HPB", y = "Temp (C)", x = "Site")+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18))+
-  scale_color_manual(values = c("0.1" = "#66ADE5", "0.5" = "#BF1B0B", "1.5" = "#FFC465", "2" = "#009E73", "6" = "#252A52"))
-  # scale_color_manual(values = color_values)
-  # scale_color_gradient("Depth_m",  high = "red", low = "blue") 
-  
-### HIX and BIX by date with Depth as specific color as gradient 
-eems_plotting |>
-  select(1:6, HIX., BIX.) |> 
-  pivot_longer(-c(1:6)) |>
-  # ggplot(aes(x = Distance, y = value, color = Depth_m))+
-  ggplot(aes(x = factor(Site_code, levels = levels_sites_code), y = value, color = Depth_m))+
-  geom_point()+
-  #facet_wrap(~Date, nrow = 3, scales = "free_y")+
-  facet_grid(name~Date, scales = "free_y")+
-  labs(x = element_blank())+
-  theme_bw()+ theme(legend.position = "right", text = element_text(size = 14))+
-  scale_color_gradient("Depth_m",  high = "red", low = "blue")
-
-## hIX by date with depth on Y
-eems_plotting |>
-  select(1:6, HIX.) |> 
-  pivot_longer(-c(1:6)) |>
-  ggplot(aes(x = factor(Site_code, levels = levels_sites_code), y = Depth_m, color = value))+
-  geom_point()+
-  scale_y_reverse()+
-  facet_grid(name~Date, scales = "free_y")+ 
-  theme_bw()+ theme(legend.position = "right", text = element_text(size = 14))+
-  # viridis::scale_color_viridis()
-  scale_color_gradient(high = "black", low = "#CFCFCF") # has also done red to blue w/ some luck
-  # scale_color_gradientn(colors = magma(256))
-
-## BIX by date with depth on Y
-eems_plotting |>
-  select(1:6, BIX.) |> 
-  pivot_longer(-c(1:6)) |>
-  ggplot(aes(x = factor(Site_code, levels = levels_sites_code), y = Depth_m, color = value))+
-  geom_point()+
-  scale_y_reverse()+
-  facet_grid(name~Date, scales = "free_y")+ 
-  theme_bw()+ theme(legend.position = "right", text = element_text(size = 14))+
-  scale_color_gradient(high = "black", low = "#CFCFCF") # has also done red to blue w/ some luck
-
-
-##### NEW STYLE TRials 
-eems_plotting |>
-  select(1:6, BIX.) |> 
-  pivot_longer(-c(1:6)) |>
-  ggplot(aes(x = value, y = Depth_m, color = as.factor(Distance)))+
-  geom_point()+
-  geom_line(orientation = "y")+
-  scale_y_reverse()+
-  facet_wrap(~Date, scales = "free_y")+ 
-  theme_bw()+ theme(legend.position = "right", text = element_text(size = 14))
-  # scale_color_gradient(high = "black", low = "#CFCFCF") # has also done red to blue w/ some luck
-  
 
 ```
 

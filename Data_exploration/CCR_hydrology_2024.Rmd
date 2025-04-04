@@ -161,7 +161,12 @@ waterlevel_daily <- waterlevel_correct |>
   summarise(HPB_Daily_waterlevel_cm = mean(waterlevel_cm, na.rm = T))
 
 waterlevel_precip <-  left_join(daily_rain, waterlevel_daily, by = "Date")
-waterlevel_precip <-  left_join(waterlevel_precip, daily_dam_waterlevel, by = "Date")
+waterlevel_precip <-  left_join(waterlevel_precip, daily_dam_waterlevel, by = "Date") 
+#clunky fix for redeploying depth sensor
+waterlevel_precip <- waterlevel_precip |> 
+  mutate(dam_depth_m = ifelse(Date >= ymd("2025-03-13"), dam_depth_m +1.1, dam_depth_m)) |> 
+  mutate(dam_depth_m = ifelse(Date %in% c(ymd("2025-03-11"),ymd("2025-03-12"),ymd("2025-03-13")) , NA, dam_depth_m)) 
+
 
 
 
