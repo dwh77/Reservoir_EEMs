@@ -259,6 +259,7 @@ faceted_hydro <- CCR_usgs_data |>
   select(-USGS_CatwabaCreek_dailystage_ft) |>
   select(-USGS_TinkerCreek_dailyflow_cfs) |>
   #select(-USGS_TinkerCreek_dailystage_ft) |> 
+  mutate(Rain_season = cumsum(CCR_MetStation_daily_rain_mm)) |> 
   pivot_longer(-1) |> 
   ggplot(aes(x = Date, y = value))+
   geom_point()+
@@ -268,7 +269,7 @@ faceted_hydro <- CCR_usgs_data |>
   geom_vline(xintercept = ymd("2024-09-16"))+  geom_vline(xintercept = ymd("2024-09-30"))+
   geom_vline(xintercept = ymd("2024-10-28"))+  geom_vline(xintercept = ymd("2024-12-17"))+
   geom_vline(xintercept = ymd("2025-02-26"))+
-  facet_wrap(~factor(name, levels = c("CCR_MetStation_daily_rain_mm", "CCR_HPB_daily_waterlevel_cm", "USGS_TinkerCreek_dailyflow_cfs", "USGS_TinkerCreek_dailystage_ft", "CCR_Dam_depth_m")), ncol = 1, scales = "free_y")+
+  facet_wrap(~factor(name, levels = c("CCR_MetStation_daily_rain_mm", "Rain_season", "CCR_HPB_daily_waterlevel_cm", "USGS_TinkerCreek_dailyflow_cfs", "USGS_TinkerCreek_dailystage_ft", "CCR_Dam_depth_m")), ncol = 1, scales = "free_y")+
   scale_x_date(breaks = "1 months", date_labels = "%b")+
   labs(x= element_blank())+
   theme_bw()+ theme(text = element_text(size = 18),
@@ -276,6 +277,8 @@ faceted_hydro <- CCR_usgs_data |>
 
 faceted_hydro
 #plotly::ggplotly(faceted_hydro)
+
+
 
 ```
 
@@ -372,6 +375,8 @@ ggplot(aes(x= Date, y= value, color = name)) +
   #scale_y_log10()+
   theme_bw()
 
+gamsplot
+
 ggplotly(gamsplot)
 
 ```
@@ -381,6 +386,8 @@ ggplotly(gamsplot)
 
 ```{r}
 raw_q <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1fgYcGsZeALuwdAX3H0UeA3u57zKsuqTkouh2bxuBTKw/edit?gid=0#gid=0")
+
+raw_q <- read.csv("C:/Users/dwh18/Downloads/Discharge_2019_Present.csv")
 
 #format data and calculate Q
 ccr_flowmate <- raw_q |> 
@@ -494,9 +501,9 @@ S1_eems <- eems24 |>
 left_join(S1_eems, ccr_flowmate, by = "Date") |> 
   ggplot(aes(y = HIX, x = L_s))+
   geom_point(aes(color = as.factor(Date)), size = 5)+
-  geom_path()+
+  #geom_path()+ #line to connect
   theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))+
-  labs(y = "HIX", x = "Q (L/s)", color = "Date")
+  labs(y = "HIX", x = "Discharge (L/s)", color = "Date")
 
 
 ##Solubles 
