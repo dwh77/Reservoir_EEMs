@@ -18,14 +18,14 @@ Site_code_number <- data.frame(Site_code = c("CS1", "CS2", "CP1", "CP2", "CC1", 
                                Site_number = c(101, 100, 98, 96, 94, 92, 90, 88, 50, 50,50,100))
 
 ## bring in distances and site class table from google sheets; have to redownload locally each time 
-distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances.csv") |> 
+distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances (1).csv") |> 
   mutate(Date = mdy(Date)) |> 
   dplyr::select(-c(13,14)) |> 
   pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft") |> 
   filter(!Site_code == "C1") 
 
 
-site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class.csv") |> 
+site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class (1).csv") |> 
   dplyr::select(-X, -Key) |> 
   mutate(Date = mdy(Date)) |> 
   pivot_longer(-c(1), names_to = "Site_code", values_to = "Site_Class") |> 
@@ -450,7 +450,7 @@ eems_plotting |>
 ```{r}
 #summarize data 
 eems_summary <- eems_plotting |> 
-  filter(!NOTES %in% c("PART")) |> 
+  filter(!NOTES %in% c("PART", "FRIDGE_TEST")) |> 
   filter(Site_code != "C1") |> 
   rename(HIX = HIX.,
          BIX = BIX.,
@@ -502,6 +502,21 @@ eems_summary |>
 
 
 ```
+
+fridge test 
+
+```{r}
+
+eemsfridge <- read.csv("../Processed_Data/Fridge_test_data.csv")
+
+eemsfridge |> 
+  ggplot(aes(x = test_code, y = FI., color = as.factor(Depth_m), shape = as.factor(Site_number)))+
+  geom_point()
+
+```
+
+
+
 
 ## DWH exploration
 
