@@ -79,6 +79,7 @@ iso_plotting <- left_join(iso, distances, by = c("Site_code", "Date")) |>
 
  #plot across dates
 iso_plotting |> 
+  filter(!is.na(Date)) |> 
   pivot_longer(-c(1:9)) |> 
   ggplot(aes(x = Distance, y = value, fill = Depth_m
   ))+
@@ -93,6 +94,8 @@ iso_plotting |>
 
 #by date
 iso_plotting |> 
+  mutate(#Date = ifelse(is.na(Date), "Rain", Date),
+         Distance = ifelse(is.na(Distance), 1000, Distance)) |>
   pivot_longer(-c(1:9)) |> 
   ggplot(aes(x = Distance, y = value, fill = Depth_m
   ))+

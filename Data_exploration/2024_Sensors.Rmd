@@ -73,8 +73,8 @@ Get CTD Data
 
 ```{r}
 
-##read in EDI data (STAGED)
-ctd_edi <- read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/1113/14/bbd126d40b44abaeeb0d734009da9ae4" ) |> filter(Reservoir == "CCR")
+##read in EDI data 
+ctd_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/200/15/9d741c9cced69cfd609c473ada2812b1" ) |> filter(Reservoir == "CCR")
 
 ### read in L data 
 ctd_L1 <- read_csv("https://raw.githubusercontent.com/CareyLabVT/Reservoirs/master/Data/DataNotYetUploadedToEDI/Raw_CTD/ctd_L1.csv")

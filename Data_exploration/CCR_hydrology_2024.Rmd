@@ -268,7 +268,7 @@ faceted_hydro <- CCR_usgs_data |>
   geom_vline(xintercept = ymd("2024-07-11"))+  geom_vline(xintercept = ymd("2024-08-14"))+
   geom_vline(xintercept = ymd("2024-09-16"))+  geom_vline(xintercept = ymd("2024-09-30"))+
   geom_vline(xintercept = ymd("2024-10-28"))+  geom_vline(xintercept = ymd("2024-12-17"))+
-  geom_vline(xintercept = ymd("2025-02-26"))+
+  geom_vline(xintercept = ymd("2025-02-26"))+  geom_vline(xintercept = ymd("2025-04-16"))+
   facet_wrap(~factor(name, levels = c("CCR_MetStation_daily_rain_mm", "Rain_season", "CCR_HPB_daily_waterlevel_cm", "USGS_TinkerCreek_dailyflow_cfs", "USGS_TinkerCreek_dailystage_ft", "CCR_Dam_depth_m")), ncol = 1, scales = "free_y")+
   scale_x_date(breaks = "1 months", date_labels = "%b")+
   labs(x= element_blank())+

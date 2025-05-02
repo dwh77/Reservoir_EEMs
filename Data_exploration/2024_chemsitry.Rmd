@@ -833,7 +833,6 @@ igc_wl <- #CCR_usgs_data |>
   labs(x= element_blank(), y = "Reservoir Water Level (m)")+  theme_bw()+ theme(text = element_text(size = 28),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
-ggsave("./igc25_figures/waterlevel.png", igc_wl, height = 6.5, width = 11, units = "in")
 
   
 
@@ -845,8 +844,7 @@ igc_hix <- data2 |>
   ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
   geom_smooth()+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 36),
-                    legend.text = element_text(size=18),
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
     labs(x= "Distance from Stream (m)", y = "Humification Index (HIX)", fill = "Depth (m)",
        shape = "Site Type")+
@@ -860,8 +858,7 @@ igc_doc <- data2 |>
   ggplot(aes(x = Distance, y = DOC_mean, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
   geom_smooth()+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 36),
-                    legend.text = element_text(size=18),
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
     labs(x= "Distance from Stream (m)", y = "DOC (mg/L)", fill = "Depth (m)",
        shape = "Site Type")+
@@ -871,33 +868,7 @@ igc_doc <- data2 |>
 
 igc_doc_hix <- ggpubr::ggarrange(igc_doc, igc_hix, nrow = 1, labels = "auto", font.label = list(size = 28))
 
-# ggsave("./igc25_figures/DOC.png", igc_doc, height = 8, width = 10, units = "in")
-# ggsave("./igc25_figures/HIX.png", igc_hix, height = 8, width = 19, units = "in")
-ggsave("./igc25_figures/DOC_HIX_combo.png", igc_doc_hix, height = 8, width = 19, units = "in")
 
-
-#HIX and DOC no color 
-igc_hix_nocolor <- data2 |>   ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m))+
-  geom_point(shape = 1, size = 4) + #shape = 21,
-  geom_smooth()+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 36),
-                    legend.text = element_text(size=18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-    labs(x= "Distance from Stream (m)", y = "Humification Index (HIX)", fill = "Depth (m)",  shape = "Site Type")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))
-
-igc_doc_nocolor <- data2 |>   ggplot(aes(x = Distance, y = DOC_mean, fill = Depth_m))+
-  geom_point(shape = 1, size = 4) + #shape = 21,
-  geom_smooth()+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 36),
-                    legend.text = element_text(size=18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-    labs(x= "Distance from Stream (m)", y = "DOC (mg/L)", fill = "Depth (m)",  shape = "Site Type")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))
-
-igc_doc_hix_nocolor <- ggpubr::ggarrange(igc_doc_nocolor, igc_hix_nocolor, nrow = 1, labels = "auto", font.label = list(size = 28))
-
-ggsave("./igc25_figures/DOC_HIX_combo_nocolor.png", igc_doc_hix_nocolor, height = 8, width = 19, units = "in")
 
 
 
@@ -921,7 +892,8 @@ data2 |>
 igc_dates <- data2 |> 
   #filter(Date %in% c(ymd("2024-05-22"), ymd("2024-08-14"), ymd("2024-09-16"), ymd("2024-09-30"), ymd("2024-10-28"))) |> 
   select(Site, Date, Depth_m, Site_Class, Distance, Dry_start, Dry_end, 
-          Temp_C, SpCond_uScm, DO_mgL, DOC_mean, HIX_mean) |> 
+          #Temp_C, SpCond_uScm, DO_mgL, 
+         DOC_mean, HIX_mean) |> 
   rename(DOC_mgL = DOC_mean, HIX = HIX_mean) |> 
   pivot_longer(-c(1:7)) |> 
   ggplot(aes(x = Distance, y = value, fill = Depth_m,
@@ -930,9 +902,8 @@ igc_dates <- data2 |>
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
             alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
   facet_grid(factor(name, levels = c("Temp_C", "SpCond_uScm", "DO_mgL", "DOC_mgL", "HIX"))~Date, scales = "free_y")+
-  geom_point(shape = 21, size = 6)+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 32),
-                    legend.text = element_text(size=24),
+  geom_point(shape = 21, size = 3)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   labs(x= "Distance from Stream (m)", fill = "Depth (m)",
        shape = "Site Type")+
@@ -941,33 +912,29 @@ igc_dates <- data2 |>
   scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))
 
-ggsave("./igc25_figures/acrossdates_FIN.png", igc_dates, height = 10, width = 20, units = "in")
+igc_dates
 
 
-doc_hix_dates <- data2 |> 
-# filter(Date %in% c(ymd("2024-05-22"), ymd("2024-12-17"), 
-  #ymd("2024-09-16"), ymd("2024-09-30"), ymd("2024-10-28"))) |> 
-  filter(Date %in% c(ymd("2024-09-16"), ymd("2024-09-30"))) |> 
+### Multi EEMs
+data2 |> 
   select(Site, Date, Depth_m, Site_Class, Distance, Dry_start, Dry_end, 
-          DOC_mean, HIX_mean) |> 
-  rename(DOC_mgL = DOC_mean, HIX = HIX_mean) |> 
+          BIX_mean, FI_mean, A_mean, T_mean, AT_mean, HIX_mean) |> 
   pivot_longer(-c(1:7)) |> 
-  ggplot(aes(x = Distance, y = value, fill = Depth_m       ))+
-  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
-            alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
-  facet_grid(factor(name, levels = c("Temp_C", "SpCond_uScm", "DO_mgL", "DOC_mgL", "HIX"))~Date, scales = "free_y")+
-  geom_point(shape = 21, size = 4)+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 15),
-                    legend.text = element_text(size=15),
+  ggplot(aes(x = Distance, y = value, fill = Depth_m,
+             #shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))
+             ))+
+  # geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), alpha = 0.1, fill = "gray", color = NA )+ 
+  # facet_grid(factor(name, levels = c("Temp_C", "SpCond_uScm", "DO_mgL", "DOC_mgL", "HIX"))~Date, scales = "free_y")+
+    facet_wrap(~factor(name), scales = "free_y", nrow = 1)+
+  geom_point(shape = 21, size = 3)+
+  #geom_smooth()+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   labs(x= "Distance from Stream (m)", fill = "Depth (m)",
        shape = "Site Type")+
   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
   scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))
-
-doc_hix_dates
-#ggsave("./igc25_figures/DOC_HIX_SUBdates_FIN.png", doc_hix_dates, height = 6, width = 14, units = "in")
 
   
 
@@ -982,6 +949,7 @@ Value on Y
 
 ```{r}
 
+##### HIX 
 #by date
 eems_summary |> 
   ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m,
@@ -992,7 +960,7 @@ eems_summary |>
   geom_point( size = 3) + #shape = 21,
   geom_errorbar(aes(ymin = HIX_min, ymax = HIX_max), width = 2) +
   facet_wrap(~Date, scales = "fixed", ncol = 7)+ 
-  ylim(1.45,14.4)+
+  # ylim(1.45,14.4)+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
     labs(x= "Distance from Stream (m)",
@@ -1006,6 +974,44 @@ eems_summary |>
 #across dates
 eems_summary |> 
   ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m,
+             ))+
+  geom_point(shape = 21, size = 3) + #shape = 21,
+  geom_smooth()+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  scale_shape_manual(values = c(24, 22, 21, 25))+ 
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
+
+
+
+##### BIX 
+#by date
+eems_summary |> 
+  ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m,
+             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))
+             ))+
+    geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
+  geom_point( size = 3) + #shape = 21,
+  geom_errorbar(aes(ymin = BIX_min, ymax = BIX_max), width = 2) +
+  facet_wrap(~Date, scales = "fixed", ncol = 7)+ 
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  scale_shape_manual(values = c(24, 22, 21, 25))+ 
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
+
+
+#across dates
+eems_summary |> 
+  ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m,
              ))+
   geom_point(shape = 21, size = 3) + #shape = 21,
   geom_smooth()+
