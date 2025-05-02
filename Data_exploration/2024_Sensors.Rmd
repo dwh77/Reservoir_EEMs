@@ -1087,6 +1087,113 @@ noon1/sunset/midnight/sunrise/noon2
 
 
 
+## C2 HOBO buoys THROUGH April 2025
+
+C2 April - October 
+
+```{r}
+hobo_C2_b6 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo10_C2_16apr25.csv", skip = 1) |> 
+  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 0.75)
+
+hobo_C2_bXa <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo13_C2_16apr25.csv", skip = 1) |> 
+  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 0)
+
+hobo_C2_bXb <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo168_C2_16apr25.csv", skip = 1) |> 
+  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 0)
+
+hobo_C2_b3 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo19_C2_16apr25.csv", skip = 1) |> 
+  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 1.5)
+
+hobo_C2_bXc <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo30_C2_16apr25.csv", skip = 1) |> 
+  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 0)
+
+hobo_C2_b5 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo31_C2_16apr25.csv", skip = 1) |> 
+  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 1)
+
+hobo_C2_b1 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo39_C2_16apr25.csv", skip = 1) |> 
+  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 2)
+
+hobo_C2_b9 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo63_C2_16apr25.csv", skip = 1) |> 
+  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 0.1)
+
+hobo_C2_b4 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo68_C2_16apr25.csv", skip = 1) |> 
+  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 1.25)
+
+
+hobos_C2 <- rbind(hobo_C2_b1, hobo_C2_b3, hobo_C2_b4, hobo_C2_b5, 
+                  hobo_C2_b6, hobo_C2_b9) |> 
+  mutate(DateTime = mdy_hms(DateTime))
+
+```
+
+
+Plot data
+
+```{r}
+######C2
+#plot raw data
+z <- hobos_C2 |> 
+  ggplot(aes(x = DateTime, y = Temp_C, color = as.factor(Depth)))+
+  geom_line()+
+  geom_vline(xintercept = ymd_hms("2024-05-22 00:00:00"))+
+  geom_vline(xintercept = ymd_hms("2024-06-19 00:00:00"))+
+  geom_vline(xintercept = ymd_hms("2024-07-11 00:00:00"))+
+  labs(title = "C2")+
+  # facet_wrap(~Depth)+
+  theme_classic()
+
+plotly::ggplotly(z)
+
+
+
+## C2 heatmap  
+temp <- hobos_C2 |> 
+  mutate(DateTime_hourly = ymd_hms(paste(as.Date(DateTime), hour(DateTime), ":00:00"))
+         ) |> 
+  # filter(DateTime > ymd("2024-07-15")) |> 
+  group_by(DateTime_hourly, Depth) |> 
+  summarise(Temp_C = mean(Temp_C, na.rm = T))  |> 
+  rename(DateTime = DateTime_hourly)
+  # pivot_wider(names_from = Depth, values_from = Temp_C)
+
+
+
+interp_temp <- akima::interp(x=temp$DateTime, y = temp$Depth, z = temp$Temp_C,  #x was DOY
+                       xo = seq(min(temp$DateTime), max(temp$DateTime), by = "1 hour"), 
+                      yo = seq(0.1, 2, by = 0.1),                     #second seq value was 10.2
+                      extrap = F, linear = T, duplicate = "strip")
+interp_temp <- akima::interp2xyz(interp_temp, data.frame=T)
+
+ggplot(interp_temp, aes(x= as.POSIXct(x, origin = "1970-01-01"), y=y))+
+  geom_raster(aes(fill=z))+
+  scale_y_reverse()+
+  scale_fill_gradientn(colours = blue2green2red(60), na.value="gray")+
+  labs(x = "Date", y = "Depth (m)", title = "CCR - C2 Heatmap",fill=expression(''*~degree*C*''))+
+  theme_classic()
+
+
+## C2 density diff
+hobos_C2 |> 
+  mutate(Depth = paste0("wtr_", Depth)) |> 
+  pivot_wider(names_from = Depth, values_from = Temp_C) |> 
+  select(DateTime, wtr_0.1, wtr_2) |> 
+  mutate(wtr_0.1_dens = water.density(wtr_0.1),
+         wtr_2_dens = water.density(wtr_2),
+         Dens_diff = wtr_2_dens - wtr_0.1_dens,
+         Temp_diff = wtr_0.1 - wtr_2) |> 
+  ggplot(aes(x = DateTime))+
+  geom_point(aes(y = Dens_diff, color = "Dens"))+
+  geom_point(aes(y = Temp_diff, color = "TempDiff"))+
+  # geom_point(aes(y = wtr_0.1, color = "T 0.1"))+
+  # geom_point(aes(y = wtr_2, color = "T 2"))+
+  scale_x_datetime(date_breaks = "1 month") +
+  #scale_x_datetime(date_breaks = "12 hour",  date_labels =  "%d (%H)") +
+  labs(x = "Date (Hour) ")
+
+```
+
+
+
 
 
 ## Pool and Cove HOBO buoys THROUGH OCTOBER 
@@ -1195,7 +1302,8 @@ temp <- hobos_C2 |>
   rename(DateTime = DateTime_hourly)
   # pivot_wider(names_from = Depth, values_from = Temp_C)
 
-
+# library(colorRamps) #for heatmap
+# library(RColorBrewer) #for heatmap 
 
 interp_temp <- akima::interp(x=temp$DateTime, y = temp$Depth, z = temp$Temp_C,  #x was DOY
                        xo = seq(min(temp$DateTime), max(temp$DateTime), by = "1 hour"), 
