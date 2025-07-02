@@ -7,7 +7,7 @@ library(tidyverse)
 # Site_code_number <- data.frame(Site_code = c("CS1", "CS2", "CP1", "CP2", "CC1", "CC2", "CC3", "CC4", "C50"),
 #                                Site_number = c(101, 100, 98, 96, 94, 92, 90, 88, 50))
 # 
-# iso_qaqc <- read_csv("./Data_Exploration/Isotopes_results_data.csv")
+# iso_qaqc <- read_csv("./Water_Isotopes/Isotopes_allruns_data.csv")
 # 
 # iso_names <- iso_qaqc |> 
 #   select(SampleName) |> 
@@ -24,22 +24,25 @@ library(tidyverse)
 #   select(Reservoir, Site_code, Site_number, Depth_m, Date, SampleName) 
 # 
 # #bring names to sample data 
-# iso_named <- left_join(iso_names, iso_qaqc, by = c("SampleName"))
+# iso_named <- left_join(iso_names, iso_qaqc, by = c("SampleName")) |> 
+#   arrange(Date, Site_number, Depth_m )
+#
+# #write csv w/ names
+#write.csv(iso_named, "./Water_Isotopes/isotopes_named.csv", row.names = F)
 
-#write csv w/ names
-# write.csv(iso_named, "./Data_exploration/isotopes_named.csv", row.names = F)
+
 
 
 
 #### Look at data -------------
-distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances.csv") |> 
+distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances (2).csv") |> 
   mutate(Date = mdy(Date)) |> 
   dplyr::select(-c(13,14)) |> 
   pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft") |> 
   filter(!Site_code == "C1") 
 
 
-site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class.csv") |> 
+site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class (2).csv") |> 
   dplyr::select(-X, -Key) |> 
   mutate(Date = mdy(Date)) |> 
   pivot_longer(-c(1), names_to = "Site_code", values_to = "Site_Class") |> 
@@ -51,15 +54,13 @@ site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_C
 
 
 ## EEM data
-iso24 <- read.csv("./Data_exploration/isotopes_named.csv")
+iso24 <- read.csv("./Water_Isotopes/isotopes_named.csv")
 
 
 iso <- iso24 |> 
   rename(Site = Site_number) |> 
+  filter(Site != 94) |> 
   mutate(Date = mdy(Date),
-         Date = ifelse(Date == ymd("2024-08-15"), ymd("2024-08-14"), Date),
-         Date = ifelse(Date == ymd("2025-02-17"), ymd("2025-02-26"), Date),
-         Date = as.Date(Date),
          Site_code = ifelse(Site == 101, "S1", NA),
          Site_code = ifelse(Site == 100, "S2", Site_code),
          Site_code = ifelse(Site == 98, "P1", Site_code),

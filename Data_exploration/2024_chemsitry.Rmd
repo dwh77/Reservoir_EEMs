@@ -240,7 +240,10 @@ solubles_summary <- solubles_plotting |>
 
 
 #check missing samples 
-z <- arrange(solubles_plotting, Date, desc(Site), Depth_m)
+z <- arrange(solubles_plotting, Date, desc(Site), Depth_m) 
+
+zz <- arrange(solubles_summary, Date, desc(Site), Depth_m) 
+
 
 
 #### Rep check
