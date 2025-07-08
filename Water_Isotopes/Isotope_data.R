@@ -53,13 +53,20 @@ site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_C
 
 
 
-## EEM data
+## ISO data
 iso24 <- read.csv("./Water_Isotopes/isotopes_named.csv")
 
+iso_rain <- iso24 |> 
+  rename(Site = Site_number) |> 
+  filter(Site == 51) |> 
+  dplyr::select(Reservoir, Site, Site_code, Depth_m, Date, X18O, X2H) |> 
+  pivot_longer(-c(1:5)) 
+  
 
 iso <- iso24 |> 
   rename(Site = Site_number) |> 
-  filter(Site != 94) |> 
+  filter(Site != 94,
+         Site != 51) |> 
   mutate(Date = mdy(Date),
          Site_code = ifelse(Site == 101, "S1", NA),
          Site_code = ifelse(Site == 100, "S2", Site_code),
@@ -71,6 +78,8 @@ iso <- iso24 |>
          Site_code = ifelse(Site == 88, "C4", Site_code),
          Site_code = ifelse(Site == 50, "C50", Site_code)) 
 
+
+## ISO plotting 
 iso_plotting <- left_join(iso, distances, by = c("Site_code", "Date")) |> 
   left_join(site_class, by = c("Site_code", "Date")) |> 
   mutate(Distance = Distance_ft*0.3048,
@@ -80,26 +89,23 @@ iso_plotting <- left_join(iso, distances, by = c("Site_code", "Date")) |>
 
  #plot across dates
 iso_plotting |> 
-  filter(!is.na(Date)) |> 
   pivot_longer(-c(1:9)) |> 
   ggplot(aes(x = Distance, y = value, fill = Depth_m
   ))+
   geom_point(shape = 21, size = 3) + 
+  geom_point(data = iso_rain, mapping = aes(x = 1250, y = value, color = Date), size = 2, shape = 17)+
   facet_wrap(~name, scales = "free_y", nrow = 2)+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x= "Distance from Stream (m)",  fill = "Depth (m)")+
+  labs(x= "Distance from Stream (m)",  fill = "Depth (m)", color = "Rain")+
   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+  
   scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
 
 #by date
 iso_plotting |> 
-  mutate(#Date = ifelse(is.na(Date), "Rain", Date),
-         Distance = ifelse(is.na(Distance), 1000, Distance)) |>
   pivot_longer(-c(1:9)) |> 
-  ggplot(aes(x = Distance, y = value, fill = Depth_m
-  ))+
+  ggplot(aes(x = Distance, y = value, fill = Depth_m))+
   geom_point(shape = 21, size = 3) + 
   facet_grid(name~Date, scales = "free_y")+
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
@@ -110,4 +116,23 @@ iso_plotting |>
   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+  
   scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
+
+
+
+##18O ~ 2H
+iso_plotting |> 
+  ggplot(aes(x = X18O, y = X2H, fill = as.factor(Site)))+
+  geom_point(shape = 21, size = 3) + 
+  geom_abline(slope = 8, intercept = 10, color = "blue", linetype = "dashed", size = 1) +
+  # facet_wrap(~name, scales = "free_y", nrow = 2)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+## 2H by site class
+iso_plotting |> 
+  ggplot(aes(x =Date, y = X2H, color = Site_Class, shape = as.factor(Site)))+
+  geom_line()
+
+
 

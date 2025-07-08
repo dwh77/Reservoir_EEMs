@@ -11,7 +11,7 @@ output: html_document
 library(tidyverse)
 # library(ggpubr)
 # library(colorRamps) #for heatmap
-# library(RColorBrewer) #for heatmap 
+# library(RColorBrewer) #for heatmap
 # library(rLakeAnalyzer)
 # library(scales) #for date format on plots
 # library(patchwork) #arrange figures w/ slashes and lines
@@ -1095,17 +1095,17 @@ C2 April - October
 hobo_C2_b6 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo10_C2_16apr25.csv", skip = 1) |> 
   select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 0.75)
 
-hobo_C2_bXa <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo13_C2_16apr25.csv", skip = 1) |> 
-  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 0)
+hobo_C2_b7 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo13_C2_16apr25.csv", skip = 1) |> 
+  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 0.5)
 
-hobo_C2_bXb <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo168_C2_16apr25.csv", skip = 1) |> 
-  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 0)
+hobo_C2_b2 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo168_C2_16apr25.csv", skip = 1) |> 
+  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 1.75)
 
 hobo_C2_b3 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo19_C2_16apr25.csv", skip = 1) |> 
   select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 1.5)
 
-hobo_C2_bXc <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo30_C2_16apr25.csv", skip = 1) |> 
-  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 0)
+hobo_C2_b8 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo30_C2_16apr25.csv", skip = 1) |> 
+  select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 0.25)
 
 hobo_C2_b5 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownloadsSCCData/master/CCR_manual_downloads/CCR_Hobos/Cove_Pool_buoys/C2_2024/hobo31_C2_16apr25.csv", skip = 1) |> 
   select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 1)
@@ -1120,8 +1120,8 @@ hobo_C2_b4 <- read.csv("https://raw.githubusercontent.com/CareyLabVT/ManualDownl
   select(2:3) |> rename(DateTime = 1, Temp_C = 2) |> mutate(Site = "C2", Depth = 1.25)
 
 
-hobos_C2 <- rbind(hobo_C2_b1, hobo_C2_b3, hobo_C2_b4, hobo_C2_b5, 
-                  hobo_C2_b6, hobo_C2_b9) |> 
+hobos_C2 <- rbind(hobo_C2_b1, hobo_C2_b2, hobo_C2_b3, hobo_C2_b4, hobo_C2_b5, 
+                  hobo_C2_b6, hobo_C2_b7, hobo_C2_b8, hobo_C2_b9) |> 
   mutate(DateTime = mdy_hms(DateTime))
 
 ```
