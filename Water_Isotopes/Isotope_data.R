@@ -2,7 +2,8 @@
 
 #pakcages
 library(tidyverse)
-
+library(ggpmisc)
+#
 #### naming  -----------------------
 # Site_code_number <- data.frame(Site_code = c("CS1", "CS2", "CP1", "CP2", "CC1", "CC2", "CC3", "CC4", "C50"),
 #                                Site_number = c(101, 100, 98, 96, 94, 92, 90, 88, 50))
@@ -59,7 +60,7 @@ iso24 <- read.csv("./Water_Isotopes/isotopes_named.csv")
 iso_rain <- iso24 |> 
   rename(Site = Site_number) |> 
   filter(Site == 51) |> 
-  dplyr::select(Reservoir, Site, Site_code, Depth_m, Date, X18O, X2H) |> 
+  dplyr::select(Reservoir, Site, Site_code, Depth_m, Date, d18O_VSMOW, d18O_VSMOW) |> 
   pivot_longer(-c(1:5)) 
   
 
@@ -85,7 +86,7 @@ iso_plotting <- left_join(iso, distances, by = c("Site_code", "Date")) |>
   mutate(Distance = Distance_ft*0.3048,
          Dry_start = Dry_start*0.3048,
          Dry_end = Dry_end*0.3048) |>
-  dplyr::select(Reservoir, Site, Site_code, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, X18O, X2H)
+  dplyr::select(Reservoir, Site, Site_code, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, d18O_VSMOW, d2H_VSMOW)
 
  #plot across dates
 iso_plotting |> 
@@ -106,7 +107,7 @@ iso_plotting |>
 iso_plotting |> 
   pivot_longer(-c(1:9)) |> 
   ggplot(aes(x = Distance, y = value, fill = Depth_m))+
-  geom_point(shape = 21, size = 3) + 
+  geom_point(shape = 21, size = 4) + 
   facet_grid(name~Date, scales = "free_y")+
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
             alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
@@ -121,18 +122,53 @@ iso_plotting |>
 
 ##18O ~ 2H
 iso_plotting |> 
-  ggplot(aes(x = X18O, y = X2H, fill = as.factor(Site)))+
+  ggplot(aes(x = d18O_VSMOW, y = d2H_VSMOW, fill = as.factor(Site_Class)))+
   geom_point(shape = 21, size = 3) + 
-  geom_abline(slope = 8, intercept = 10, color = "blue", linetype = "dashed", size = 1) +
-  # facet_wrap(~name, scales = "free_y", nrow = 2)+
+  # stat_poly_line(method = "lm", linewidth = 2, aes(group = 1))+
+  # stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
+  #              aes(x = d18O_VSMOW, y = d2H_VSMOW, group = 1,
+  #                  label=paste(..eq.label.., ..adj.rr.label.., ..p.value.label..,sep="~~~"),size=3))+
+  ## add GMWL and equation 
+  geom_abline(slope = 8, intercept = 10, color = "black", linetype = "dashed", size = 1.5) +
+  # annotate("text", x = min(iso_plotting$d18O_VSMOW), y = -26,
+  #          label = "y = 8x + 10", size = 5, color = "black", hjust = 0)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+## D excess
+iso_plotting |> 
+  mutate(D_excess = d2H_VSMOW - 8*d18O_VSMOW) |> 
+  ggplot(aes(x =Date, y = D_excess, fill = Depth_m))+
+  geom_point(shape = 21, size = 4) + 
+  facet_wrap(~Site)+
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+#just 0.1m
+iso_plotting |> 
+  filter(Depth_m == 0.1) |> 
+  mutate(D_excess = d2H_VSMOW - 8*d18O_VSMOW) |> 
+  ggplot(aes(x =Date, y = D_excess, color = as.factor(Site)))+
+  geom_point(size = 2) + 
+  geom_line(size = 1.3)+
+  annotate("text", x = ymd("2024-06-01"), y = 18,
+           label = "d excess = dD - 8*d18O", size = 5, color = "black", hjust = 0)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+  
+  
+#2 H just 0.1m
+iso_plotting |> 
+  filter(Depth_m == 0.1) |> 
+  ggplot(aes(x =Date, y = d2H_VSMOW, color = as.factor(Site)))+
+  geom_point(size = 2) + 
+  geom_line(size = 1.3)+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 
-## 2H by site class
-iso_plotting |> 
-  ggplot(aes(x =Date, y = X2H, color = Site_Class, shape = as.factor(Site)))+
-  geom_line()
 
 
 
