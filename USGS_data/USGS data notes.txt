@@ -1,0 +1,12 @@
+USGS gauges near Carvins Cove Reservoir, Roanoke, VA, USA
+
+Catawba Creek Near Catawba, VA - 02018500 (CC)
+- Continuous data sets: Gage height, feet (2007-10-02 - 2025-07-10)
+- Continuous data sets: Discharge cubic feet per second (1990-10-01 - 2025-07-10)
+- Daily data sets: Discharge cubic feet per second (1943-10-01 - 2025-07-09)
+
+
+Tinker Creek Near Daleville, VA - 02055100 (TC)
+- Continuous data sets: Gage height, feet (2007-10-01 - 2025-07-10)
+- Continuous data sets: Discharge cubic feet per second (1990-10-01 - 2025-07-10)
+- Daily data sets: Discharge cubic feet per second (1956-05-01 - 2025-07-09)

@@ -22,7 +22,7 @@ library(plotly)
 ccr_dam_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/3/4afb209b30ebed898334badd3819d854" )
 ccr_dam_git <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/refs/heads/ccre-dam-data-qaqc/ccre-waterquality_L1.csv") 
 
-ccr_dam <- rbind(ccr_dam_edi, ccr_dam_git)
+ccr_dam <- plyr::rbind.fill(ccr_dam_edi, ccr_dam_git)
 
 waterlevel_10min <- ccr_dam |> filter(DateTime > ymd("2024-04-01")) |> ggplot(aes(x = DateTime, y = LvlDepth_m_13))+geom_point()
 
@@ -179,31 +179,34 @@ Set up data
 ```{r}
 library(dataRetrieval)
 
-#get data from USGS
+#get data from USGS for sites near CCR
 sitenos <- c("02055100" , "02018500")
 
 #get site info
 siteinfo <- readNWISsite(sitenos)
 data_available <- whatNWISdata(siteNumber = sitenos, service = "dv") #can remove dv to get other variables
 
-#get daily Q
-startDate <- "2024-04-01" # "1987-01-01"
-#startDate <- "2020-01-01"
-endDate <- Sys.Date()
-parameter <- "00060" # 00060 is daily Q; 00065 is stage 
-stage <- "00065"
+#set parameters to read in data
+startDate <- "2024-04-01" # "1987-01-01" to line up w/ WVWA records; "1940-01-01" gets all possible data from the sites
+endDate <- Sys.Date() #to today
+parameter <- "00060" # 00060 is Q, works for daily (readNWISdv) and 15min (readNWISuv) USGS parameter 'Discharge, cubic feet per second'
+stage <- "00065" # 00065 is USGS parameter code for 'Gage height, feet' is continous data
 
+#Daily Q
 Qdat <- readNWISdv(sitenos, parameter, startDate, endDate) %>% 
   renameNWISColumns()
 
 Qdata <- left_join(Qdat, siteinfo, by = c("site_no"))
 
-stage_dat <- readNWISuv(sitenos, stage, startDate, endDate) %>% 
+## 15 min Q
+# Q_15min_dat <- readNWISuv(sitenos, parameter, startDate, endDate) %>% 
+#   renameNWISColumns()
+
+## 15 min stage
+stage_15min_dat <- readNWISuv(sitenos, stage, startDate, endDate) %>% 
   renameNWISColumns()
 
-stagedata <- left_join(stage_dat, siteinfo, by = c("site_no"))
-
-stagedata |> 
+stage_15min_dat |> 
   ggplot(aes(x = dateTime, y = GH_Inst, col = site_no))+
   geom_point()+
   labs(title = "USGS gauges height: 15 min")
@@ -254,12 +257,13 @@ Plots
 ```{r}
 
 faceted_hydro <- CCR_usgs_data |> 
-  #filter(Date > ymd("2024-08-01")) |> 
+  filter(Date >= ymd("2024-05-01")) |> 
+  filter(Date < ymd("2025-05-01")) |> 
   select(-USGS_CatwabaCreek_dailyflow_cfs) |>
   select(-USGS_CatwabaCreek_dailystage_ft) |>
   select(-USGS_TinkerCreek_dailyflow_cfs) |>
   #select(-USGS_TinkerCreek_dailystage_ft) |> 
-  mutate(Rain_season = cumsum(CCR_MetStation_daily_rain_mm)) |> 
+  #mutate(Rain_season = cumsum(CCR_MetStation_daily_rain_mm)) |> 
   pivot_longer(-1) |> 
   ggplot(aes(x = Date, y = value))+
   geom_point()+
@@ -512,7 +516,7 @@ S1_eems <- eems24 |>
 left_join(S1_eems, ccr_flowmate, by = "Date") |> 
   ggplot(aes(y = HIX, x = L_s))+
   geom_point(aes(color = as.factor(Date)), size = 5)+
-  #geom_path()+ #line to connect
+  geom_path()+ #line to connect
   theme_bw()+ theme(legend.position = "right", text = element_text(size = 18))+
   labs(y = "HIX", x = "Discharge (L/s)", color = "Date")
 
