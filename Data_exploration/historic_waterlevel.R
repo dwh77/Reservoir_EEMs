@@ -1,7 +1,125 @@
 ## CCR Historic Hydrology
 library(tidyverse)
-library(ggpmisc) #stat poly line
 
+#### Read in WVWA data ####
+wvwa <- read_csv("./Data_exploration/WVWA_data/CCR_water_levels_clean_1987_july2025.csv")
+
+ccr <- wvwa |> 
+  pivot_longer(-c(1:2), names_to = "Year", values_to = "Level_ft") |> 
+  mutate(Date = WVWA_Date) |> 
+  separate(Date, into = paste0("part", 1:2), sep = " ", fill = "right") |> 
+  mutate(part2 = substr(part2, 1, 2),
+         part2 = str_remove_all(part2, "-"),
+         Date_ymd = ymd(paste(Year, part1, part2, sep = "-"))) |> 
+  select(WVWA_Date, Date_ymd, Julian_date, Year, Level_ft) |> 
+  rename(Date = Date_ymd) 
+
+
+#### Heatmaps and timeseries of wvwa water level ####
+ccr |> 
+  filter(Year >= 2015) |> 
+  ggplot(aes(x = Julian_date, y = Year, fill = round(Level_ft)))+
+  geom_tile()+
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = median(ccr$Level_ft, na.rm = T), guide = "colourbar") +
+  # scale_fill_gradient(low="blue", high="red")+
+  labs(fill = "Water Level (ft)", 
+       y = "Year", x = "Julian Day of Year")
+
+ccr |> 
+  filter(Year >= 2015) |> 
+  ggplot(aes(x = Julian_date, y = Level_ft, color = Year))+
+  geom_line()+
+  theme_bw()
+
+
+ccr |> 
+  filter(Year >= 2015) |> 
+  ggplot(aes(x = Date, y = Level_ft))+ # color = Year
+  geom_line(size = 1.3)+
+  geom_rect(aes(xmin = ymd("2024-05-01"), xmax = ymd("2025-04-01"), ymin = -Inf, ymax = Inf), 
+            alpha = 0.01, fill = "gray", color = NA )+ #color gets rid of border
+  theme_bw()
+
+
+#### CCR water year starting on May 1st ####
+
+ccr_wateryear <- ccr |> 
+  mutate(water_year = if_else(month(Date) >= 5, year(Date), year(Date) - 1)) |> ## fix year to start on may 1; all prior dates go to following year 
+  mutate(water_year_Fakedate = ymd(paste(2030, month(Date), day(Date), sep = "-"))) |>  # Dummy year column
+  mutate(Days_since_1may = Julian_date - 122,
+         Days_since_1may = ifelse(Days_since_1may < 0, Days_since_1may +365, Days_since_1may))
+
+median(ccr_wateryear$Level_ft, na.rm = T)
+
+z <- filter(ccr_wateryear, water_year > 2015, water_year < 2025)
+median(z$Level_ft, na.rm = T)
+ 
+ccr_wateryear |>  
+  filter(water_year > 2015, water_year <2025) |>
+  ggplot(aes(x = Days_since_1may, y = as.factor(water_year), fill = round(Level_ft))) +
+  geom_tile() +
+  #scale_fill_gradient(low="blue", high="red")+
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = median(ccr_wateryear$Level_ft, na.rm = T), guide = "colourbar")+
+  labs(x = "Days since 1 May", y = "Water Year", fill = "Water Level") 
+
+
+ccr_wateryear |> 
+  filter(water_year > 2015, water_year <2025) |>
+  ggplot(aes(x = Days_since_1may, y = Level_ft, color = as.factor(water_year)))+
+  geom_line()+
+  theme_bw()
+
+
+
+
+
+#### Density plots and stats by Year ####
+
+## density plots of water level by year
+ccr_wateryear %>% 
+  filter(water_year >= 2015, water_year<2025) |> 
+  ggplot(aes(x = Level_ft, color = factor(water_year), fill = factor(water_year)))+
+  geom_density(alpha = 0.5)
+
+## yearly stats per water year
+yearmean <- ccr_wateryear |> 
+  filter(water_year > 1986, water_year < 2025) |> 
+  #filter(water_year >= 2015, water_year < 2025) |> 
+  group_by(water_year) |> 
+  summarise(min = min(Level_ft, na.rm = T),
+            median = median(Level_ft, na.rm = T),
+            mean = mean(Level_ft, na.rm = T),
+            max = max(Level_ft, na.rm = T)
+  ) 
+
+summary(yearmean)
+
+yearmean |> filter(water_year == 2024)
+
+
+## probabilities of yearly stats for 2024
+quantile(yearmean$mean, probs = seq(.1, .9, by = .1))
+
+
+cdf <- ecdf(yearmean$mean)
+cdf(1166)
+allx <- cdf(yearmean$mean)
+allx
+
+yearmean |> 
+  # filter(water_year >= 2015) |> 
+  ggplot(aes(x = mean))+
+  geom_density()+
+  geom_point(aes(y = 0.1, color = factor(water_year)))+
+  # facet_wrap(~name, scales = "free_y")+
+  geom_vline(xintercept = 1166)+
+  labs(x = "Water level (ft)", title = "1987-2024 Mean yearly water level")
+
+
+
+#### OLD ####
 
 ############# NOAA ROA ############################
 roa1 <- read.csv("./Data_exploration/NOAA_ROA/3958298_NOAA_ROA_20240101_20250310.csv")
