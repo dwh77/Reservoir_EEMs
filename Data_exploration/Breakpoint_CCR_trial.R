@@ -6,6 +6,79 @@
 # Last update: 2019-02-01 by ERH
 ############################################################################
 
+
+df <- eems_summary
+
+ df <- df |> filter(Depth_m == 0.1)
+
+p <- ggplot(df, aes(x = Distance, y = BIX_mean))+
+  geom_point()
+
+p
+
+#### DWH start from scratch style based on example from rpubs.com
+library(segmented)
+library(tidyverse)
+
+my.lm <- lm(BIX_mean ~ Distance, data = df)
+summary(my.lm)
+
+my.seg <- segmented(my.lm,
+                    seg.Z = ~Distance,
+                    psi = 3)
+
+summary(my.seg)
+
+
+my.seg$psi
+slope(my.seg)
+
+my.fitted <- fitted(my.seg)
+
+my.model <- data.frame(Distance = df$Distance, BIX_fit = my.fitted)
+
+ggplot(my.model, aes(x = Distance, y = BIX_fit))+
+  geom_line()
+
+my.lines <- my.seg$psi[ , 2]
+
+p+geom_line(data = my.model, aes(x = Distance, y = BIX_fit), color = "red" )+
+  geom_vline(xintercept = my.lines, linetype = "dashed")
+
+
+# DOC condensed 
+df <- solubles_summary
+
+df <- df |> filter(Depth_m == 0.1)
+
+p <- ggplot(df, aes(x = Distance, y = DOC_mean))+
+  geom_point()
+
+my.lm <- lm(DOC_mean ~ Distance, data = df)
+summary(my.lm)
+
+my.seg <- segmented(my.lm,
+                    seg.Z = ~Distance,
+                    psi = 3)
+
+my.seg$psi
+slope(my.seg)
+
+my.fitted <- fitted(my.seg)
+
+my.model <- data.frame(Distance = df$Distance, DOC_fit = my.fitted)
+
+ggplot(my.model, aes(x = Distance, y = DOC_fit))+
+  geom_line()
+
+my.lines <- my.seg$psi[ , 2]
+
+p+geom_line(data = my.model, aes(x = Distance, y = DOC_fit), color = "red" )+
+  geom_vline(xintercept = my.lines, linetype = "dashed")
+
+
+
+
 ## [01] LOAD PACKAGES & DATA #####################################
 
 #load packages
