@@ -60,7 +60,7 @@ iso24 <- read.csv("./Water_Isotopes/isotopes_named.csv")
 iso_rain <- iso24 |> 
   rename(Site = Site_number) |> 
   filter(Site == 51) |> 
-  dplyr::select(Reservoir, Site, Site_code, Depth_m, Date, d18O_VSMOW, d18O_VSMOW) |> 
+  dplyr::select(Reservoir, Site, Site_code, Depth_m, Date, d18O_VSMOW, d2H_VSMOW) |> 
   pivot_longer(-c(1:5)) 
   
 

@@ -166,6 +166,42 @@ p+  geom_vline(xintercept = my.lines, linetype = "dashed")+ #breakpoint
 
 
 
+### isotopes
+df <- iso_plotting
+
+p <- ggplot(df, aes(x = Distance, y = d18O_VSMOW))+
+  geom_point()
+p
+
+#fit normal linear regression 
+my.lm <- lm(d18O_VSMOW ~ Distance, data = df)
+summary(my.lm)
+
+my.coef <- coef(my.lm)
+
+p + geom_abline(intercept = my.coef[1], 
+                slope = my.coef[2], 
+                aes(colour = "overall"))
+
+
+#Run breakpoint
+my.seg <- segmented(my.lm,  seg.Z = ~ Distance,       psi = 2 )
+
+my.seg$psi
+
+my.fitted <- fitted(my.seg)
+my.model <- data.frame(Distance = df$Distance, Iso_fit = my.fitted)
+
+ggplot(my.model, aes(x = Distance, y = Iso_fit))+
+  geom_line()
+
+my.lines <- my.seg$psi[ , 2]
+
+p+geom_line(data = my.model, aes(x = Distance, y = Iso_fit), color = "red" )+
+  #geom_smooth()+
+  geom_vline(xintercept = my.lines, linetype = "dashed")
+
+
 
 
 #### updating examples from Brynn's paper ####
