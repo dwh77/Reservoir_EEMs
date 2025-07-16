@@ -18,11 +18,19 @@ shapiro.test(solubles_summary$DOC_mean) # p-values < 0.05 means data is not norm
 eemboxplot <- eems_summary |> 
   # filter(Depth_m != 1.5,
   #        Depth_m != 9) |> 
+  mutate(Site_Class = ifelse(Site_Class == "Pool", "Backwater", Site_Class)) |> 
   mutate(Site_Type = ifelse(Site %in% c(50,88), "Pelagic", NA),
          Site_Type = ifelse(Site %in% c(90,92), "Cove", Site_Type),
          Site_Type = ifelse(Site %in% c(96,98), "Backwater", Site_Type),
          Site_Type = ifelse(Site %in% c(100,101), "Stream", Site_Type)
   ) 
+
+eemboxplot |>   group_by(Site_Class) %>%
+  summarise(Count = n()) 
+
+eemboxplot |>   group_by(Site_Type) %>%
+  summarise(Count = n()) 
+
 
 #kruskal and dunn test
 kruskal_bix <- kruskal.test(BIX_mean ~ Site_Type, data = eemboxplot)
@@ -61,6 +69,24 @@ left_join(docboxplot, dunn_bix_letters_list, by = c("Site_Type" = "Group")) %>%
   geom_boxplot()+   geom_jitter(width = 0.2)+
   stat_compare_means(method = "kruskal.test", label.y = 4.8, label.x = 1.3, size = 4)+ 
   geom_text(aes(x = Site_Type, label = Letter), y = 4.6, size = 5)+  theme_bw()
+
+
+### by site class (where P1, P2, and C2 will change) for proof of concept
+kruskal_bix <- kruskal.test(BIX_mean ~ Site_Class, data = eemboxplot)
+dunn_bix <- FSA::dunnTest(BIX_mean ~ Site_Class, data = eemboxplot)
+dunn_bix_letters <- dunn_bix$res
+dunn_bix_letters_list <- rcompanion::cldList(comparison = dunn_bix_letters$Comparison, p.value = dunn_bix_letters$P.adj, threshold = 0.05)
+
+level_order <- c("Stream", "Backwater", "Cove", "Pelagic")
+
+left_join(eemboxplot, dunn_bix_letters_list, by = c("Site_Class" = "Group")) %>%
+  ggplot(aes(x = factor(Site_Class, level = level_order), y = BIX_mean))+   
+  geom_boxplot()+ #, outlier.alpha = 0
+  #geom_violin()+
+  geom_jitter(width = 0.2)+
+  stat_compare_means(method = "kruskal.test", label.y = 0.94, label.x = 1.3, size = 4)+ 
+  geom_text(aes(x = Site_Class, label = Letter), y = 0.92, size = 5)+
+  theme_bw()
   
 
 
