@@ -5,27 +5,96 @@
 # Code by: BO
 # Last update: 2019-02-01 by ERH
 ############################################################################
+library(ggpubr)
+
+#### DWH just looking at boxplots by site ####
+
+#normality: https://www.sthda.com/english/wiki/normality-test-in-r
+ggdensity(eems_summary$BIX_mean, xlab = "BIX", main = "Density plot of BIX in CCR")
+shapiro.test(eems_summary$BIX_mean) # p-values < 0.05 means data is not normally distributed
+ggdensity(solubles_summary$DOC_mean, xlab = "DOC (mg/L)", main = "Density plot of DOC in CCR")
+shapiro.test(solubles_summary$DOC_mean) # p-values < 0.05 means data is not normally distributed
+
+eemboxplot <- eems_summary |> 
+  # filter(Depth_m != 1.5,
+  #        Depth_m != 9) |> 
+  mutate(Site_Type = ifelse(Site %in% c(50,88), "Pelagic", NA),
+         Site_Type = ifelse(Site %in% c(90,92), "Cove", Site_Type),
+         Site_Type = ifelse(Site %in% c(96,98), "Backwater", Site_Type),
+         Site_Type = ifelse(Site %in% c(100,101), "Stream", Site_Type)
+  ) 
+
+#kruskal and dunn test
+kruskal_bix <- kruskal.test(BIX_mean ~ Site_Type, data = eemboxplot)
+kruskal_bix
+dunn_bix <- FSA::dunnTest(BIX_mean ~ Site_Type, data = eemboxplot)
+dunn_bix_letters <- dunn_bix$res
+dunn_bix_letters_list <- rcompanion::cldList(comparison = dunn_bix_letters$Comparison, p.value = dunn_bix_letters$P.adj, threshold = 0.05)
+
+level_order <- c("Stream", "Backwater", "Cove", "Pelagic")
+ 
+left_join(eemboxplot, dunn_bix_letters_list, by = c("Site_Type" = "Group")) %>%
+  ggplot(aes(x = factor(Site_Type, level = level_order), y = BIX_mean))+   
+  geom_boxplot()+ #, outlier.alpha = 0
+  #geom_violin()+
+  geom_jitter(width = 0.2)+
+  stat_compare_means(method = "kruskal.test", label.y = 0.94, label.x = 1.3, size = 4)+ 
+  geom_text(aes(x = Site_Type, label = Letter), y = 0.92, size = 5)+
+  theme_bw()
+
+  
+#for doc
+docboxplot <- solubles_summary |> 
+  mutate(Site_Type = ifelse(Site %in% c(50,88), "Pelagic", NA),  Site_Type = ifelse(Site %in% c(90,92), "Cove", Site_Type),
+         Site_Type = ifelse(Site %in% c(96,98), "Backwater", Site_Type), Site_Type = ifelse(Site %in% c(100,101), "Stream", Site_Type)) 
+
+#kruskal and dunn test
+kruskal_bix <- kruskal.test(DOC_mean ~ Site_Type, data = docboxplot)
+dunn_bix <- FSA::dunnTest(DOC_mean ~ Site_Type, data = docboxplot)
+dunn_bix_letters <- dunn_bix$res
+dunn_bix_letters_list <- rcompanion::cldList(comparison = dunn_bix_letters$Comparison, p.value = dunn_bix_letters$P.adj, threshold = 0.05)
+
+level_order <- c("Stream", "Backwater", "Cove", "Pelagic")
+
+left_join(docboxplot, dunn_bix_letters_list, by = c("Site_Type" = "Group")) %>%
+  ggplot(aes(x = factor(Site_Type, level = level_order), y = DOC_mean))+   
+  geom_boxplot()+   geom_jitter(width = 0.2)+
+  stat_compare_means(method = "kruskal.test", label.y = 4.8, label.x = 1.3, size = 4)+ 
+  geom_text(aes(x = Site_Type, label = Letter), y = 4.6, size = 5)+  theme_bw()
+  
 
 
+#### DWH start from scratch style based on example from https://rpubs.com/MarkusLoew/12164 ####
+library(segmented)
+library(tidyverse)
+
+#set up data and base plot
 df <- eems_summary
 
- df <- df |> filter(Depth_m == 0.1)
+#df <- df |> filter(Depth_m == 0.1)
 
 p <- ggplot(df, aes(x = Distance, y = BIX_mean))+
   geom_point()
 
 p
 
-#### DWH start from scratch style based on example from rpubs.com
-library(segmented)
-library(tidyverse)
-
+#fit normal linear regression 
 my.lm <- lm(BIX_mean ~ Distance, data = df)
 summary(my.lm)
 
+my.coef <- coef(my.lm)
+
+p + geom_abline(intercept = my.coef[1], 
+                slope = my.coef[2], 
+                aes(colour = "overall"))
+
+
+#Run breakpoint
 my.seg <- segmented(my.lm,
-                    seg.Z = ~Distance,
-                    psi = 3)
+                    seg.Z = ~ Distance,
+                    psi = 2 #using 1,2,3,4 gives just one break for BIX; using the line below gives multiple numbers
+                    #psi = list(Distance = c(200, 500)) #This will force breaks for number of options ie. run c(100,250,500,750) instead
+                    )
 
 summary(my.seg)
 
@@ -43,40 +112,37 @@ ggplot(my.model, aes(x = Distance, y = BIX_fit))+
 my.lines <- my.seg$psi[ , 2]
 
 p+geom_line(data = my.model, aes(x = Distance, y = BIX_fit), color = "red" )+
+  #geom_smooth()+
   geom_vline(xintercept = my.lines, linetype = "dashed")
 
 
-# DOC condensed 
-df <- solubles_summary
 
-df <- df |> filter(Depth_m == 0.1)
+### DWH fitting actual regression lines instead of model fit as red lines
+my.slopes <- coef(my.seg)
 
-p <- ggplot(df, aes(x = Distance, y = DOC_mean))+
-  geom_point()
+b0 <- coef(my.seg)[[1]]
+b1 <- coef(my.seg)[[2]]
 
-my.lm <- lm(DOC_mean ~ Distance, data = df)
-summary(my.lm)
+# Important:
+# the coefficients are the differences in slope in comparison to the previous slope
+c1 <- coef(my.seg)[[2]] + coef(my.seg)[[3]]
+break1 <- my.seg$psi[[3]]
 
-my.seg <- segmented(my.lm,
-                    seg.Z = ~Distance,
-                    psi = 3)
-
-my.seg$psi
-slope(my.seg)
-
-my.fitted <- fitted(my.seg)
-
-my.model <- data.frame(Distance = df$Distance, DOC_fit = my.fitted)
-
-ggplot(my.model, aes(x = Distance, y = DOC_fit))+
-  geom_line()
-
-my.lines <- my.seg$psi[ , 2]
-
-p+geom_line(data = my.model, aes(x = Distance, y = DOC_fit), color = "red" )+
-  geom_vline(xintercept = my.lines, linetype = "dashed")
+#Solve for c0 (intercept of second segment):
+c0 <- b0 + b1 * break1 - c1 * break1
 
 
+p+  geom_vline(xintercept = my.lines, linetype = "dashed")+ #breakpoint
+  geom_abline(intercept = b0, slope = b1, 
+              aes(colour = "first part"), show_guide = TRUE)+ #line before first break
+  geom_abline(intercept = c0, slope = c1, 
+              aes(colour = "second part"), show_guide = TRUE)
+
+
+
+
+
+#### updating examples from Brynn's paper ####
 
 
 ## [01] LOAD PACKAGES & DATA #####################################
