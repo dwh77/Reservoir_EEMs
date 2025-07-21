@@ -148,9 +148,18 @@ iso_plotting |>
 
 #just 0.1m
 iso_plotting |> 
+  mutate(Site_code_new = ifelse(Site == 101, "S1", NA),
+         Site_code_new = ifelse(Site == 100, "S2", Site_code_new),
+         Site_code_new = ifelse(Site == 98, "B1", Site_code_new),
+         Site_code_new = ifelse(Site == 96, "B2", Site_code_new),
+         Site_code_new = ifelse(Site == 92, "C1", Site_code_new),
+         Site_code_new = ifelse(Site == 90, "C2", Site_code_new),
+         Site_code_new = ifelse(Site == 88, "P1", Site_code_new),
+         Site_code_new = ifelse(Site == 50, "P2", Site_code_new),
+  ) |> 
   filter(Depth_m == 0.1) |> 
   mutate(D_excess = d2H_VSMOW - 8*d18O_VSMOW) |> 
-  ggplot(aes(x =Date, y = D_excess, color = as.factor(Site)))+
+  ggplot(aes(x =Date, y = D_excess, color = as.factor(Site_code_new)))+
   geom_point(size = 2) + 
   geom_line(size = 1.3)+
   annotate("text", x = ymd("2024-06-01"), y = 18,
@@ -161,8 +170,17 @@ iso_plotting |>
   
 #2 H just 0.1m
 iso_plotting |> 
+  mutate(Site_code_new = ifelse(Site == 101, "S1", NA),
+         Site_code_new = ifelse(Site == 100, "S2", Site_code_new),
+         Site_code_new = ifelse(Site == 98, "B1", Site_code_new),
+         Site_code_new = ifelse(Site == 96, "B2", Site_code_new),
+         Site_code_new = ifelse(Site == 92, "C1", Site_code_new),
+         Site_code_new = ifelse(Site == 90, "C2", Site_code_new),
+         Site_code_new = ifelse(Site == 88, "P1", Site_code_new),
+         Site_code_new = ifelse(Site == 50, "P2", Site_code_new),
+         ) |> 
   filter(Depth_m == 0.1) |> 
-  ggplot(aes(x =Date, y = d2H_VSMOW, color = as.factor(Site)))+
+  ggplot(aes(x =Date, y = d2H_VSMOW, color = as.factor(Site_code_new)))+
   geom_point(size = 2) + 
   geom_line(size = 1.3)+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
