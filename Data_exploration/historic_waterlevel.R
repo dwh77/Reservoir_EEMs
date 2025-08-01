@@ -119,6 +119,65 @@ yearmean |>
 
 
 
+#### ROA precip ----
+#temps are in F; precip is in inches
+roa <- read.csv("C:/Users/dwh18/OneDrive/Desktop/CCR_rhessys_data/NOAA_ROA/4043554_NOAA_ROAdaily_1jan1948_2jun2025.csv")
+
+#daily rain ts
+roa |> 
+  ggplot(aes(x = ymd(DATE), y = PRCP))+
+  geom_point()
+
+#Yearly rain by actual year 
+roa |> 
+  select(DATE, PRCP) |> 
+  mutate(Year = year(DATE)) |> 
+  group_by(Year) |> 
+  summarize(Yearly_Precip_in = sum(PRCP)) |> 
+  ggplot(aes(x = Year, y = Yearly_Precip_in))+
+  geom_point()+
+  geom_line()
+
+
+## ROA water year
+roa_wateryear <- roa |> 
+  rename(Date = DATE) |> 
+  select(Date, PRCP) |> 
+  mutate(Julian_date = yday(Date)) |> 
+  mutate(water_year = if_else(month(Date) >= 5, year(Date), year(Date) - 1)) |> ## fix year to start on may 1; all prior dates go to following year 
+  mutate(water_year_Fakedate = ymd(paste(2030, month(Date), day(Date), sep = "-"))) |>  # Dummy year column
+  mutate(Days_since_1may = Julian_date - 122,
+         Days_since_1may = ifelse(Days_since_1may < 0, Days_since_1may +365, Days_since_1may))
+
+
+roa_wateryear |> 
+  filter(water_year > 1947, water_year <2025) |>
+  group_by(water_year) |> 
+  summarize(Yearly_Precip_in = sum(PRCP)) |> 
+  ggplot(aes(x = water_year, y = Yearly_Precip_in))+
+  geom_point()+
+  geom_line()
+
+
+roa_wateryear |>  
+  #filter(water_year > 2015, water_year <2025) |>
+  ggplot(aes(x = Days_since_1may, y = as.factor(water_year), fill = round(PRCP))) +
+  geom_tile() +
+  #scale_fill_gradient(low="blue", high="red")+
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       #midpoint = mean(roa_wateryear$PRCP, na.rm = T),
+                       guide = "colourbar")+
+  labs(x = "Days since 1 May", y = "Water Year", fill = "Daily Precipitation") 
+
+
+
+
+
+
+
+
+
+
 #### OLD ####
 
 ############# NOAA ROA ############################
