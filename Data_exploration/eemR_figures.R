@@ -1,12 +1,14 @@
 ### abbrevaited script from AGH to make heatmaps for an indivual EEMs via eemR and staRdom
 
+
 ##plotting eem w/ p file
 #### NOT working right now; need to figure out how to get it to recognize header and columns correctly
-eem_csv <- read.csv("./Processed_Data/P_files/p_20250424_CC4_16apr25_01R1.csv", header = F)
+eem_csv <- read.csv("./Processed_Data/P_files2/p_20250424_CC4_16apr25_01R1.csv", header = F)
 
-eem_file <- "./Processed_Data/P_files/p_20250424_CC4_16apr25_01R1.csv"
+eem_file <- "./Processed_Data/P_files2/p_20250424_CC4_16apr25_01R1.csv"
 
 eem <- eem_read(eem_file, recursive = TRUE, import_function = eem_csv)
+
 
 plot(eem)
 
