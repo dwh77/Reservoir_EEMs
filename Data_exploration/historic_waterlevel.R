@@ -121,7 +121,8 @@ yearmean |>
 
 #### ROA precip ----
 #temps are in F; precip is in inches
-roa <- read.csv("C:/Users/dwh18/OneDrive/Desktop/CCR_rhessys_data/NOAA_ROA/4043554_NOAA_ROAdaily_1jan1948_2jun2025.csv")
+roa <- read.csv("C:/Users/dwh18/OneDrive/Desktop/CCR_rhessys_data/NOAA_ROA/4043554_NOAA_ROAdaily_1jan1948_2jun2025.csv") |> 
+  filter(DATE < ymd("2025-06-02")) #get rid of last day w/ missing data
 
 #daily rain ts
 roa |> 
@@ -150,12 +151,18 @@ roa_wateryear <- roa |>
          Days_since_1may = ifelse(Days_since_1may < 0, Days_since_1may +365, Days_since_1may))
 
 
-roa_wateryear |> 
+
+roa_wateryear_yearly <- roa_wateryear |> 
   filter(water_year > 1947, water_year <2025) |>
   group_by(water_year) |> 
-  summarize(Yearly_Precip_in = sum(PRCP)) |> 
+  summarize(Yearly_Precip_in = sum(PRCP))
+
+roa_median_yearly_wateryear <- median(roa_wateryear_yearly$Yearly_Precip_in)
+
+roa_wateryear_yearly |> 
   ggplot(aes(x = water_year, y = Yearly_Precip_in))+
   geom_point()+
+  geom_hline(yintercept = roa_median_yearly_wateryear)+
   geom_line()
 
 
@@ -171,7 +178,15 @@ roa_wateryear |>
 
 
 
-
+## how 2025 stacks up so far
+roa_wateryear |> 
+  filter(water_year_Fakedate < ymd("2030-06-01")) |> 
+  filter(water_year > 1947, water_year <2025) |>
+  group_by(water_year) |> 
+  summarize(Yearly_Precip_in = sum(PRCP)) |> 
+  ggplot(aes(x = water_year, y = Yearly_Precip_in))+
+  geom_point()+
+  geom_line()
 
 
 

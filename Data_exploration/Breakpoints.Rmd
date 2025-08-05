@@ -17,6 +17,119 @@ library(tidyverse)
 
 ## Set up data
 
+site characteristics
+
+```{r}
+
+Site_code_number <- data.frame(Site_code = c("CS1", "CS2", "CP1", "CP2", "CC1", "CC2", "CC3", "CC4", "C50"),
+                               Site_number = c(101, 100, 98, 96, 94, 92, 90, 88, 50))
+
+## bring in distances and site class table from google sheets; have to redownload locally each time 
+distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances (2).csv") |> 
+  mutate(Date = mdy(Date)) |> 
+  dplyr::select(-c(13,14)) |> 
+  pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft") |> 
+  filter(!Site_code == "C1") 
+
+
+site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class (2).csv") |> 
+  dplyr::select(-X, -Key) |> 
+  mutate(Date = mdy(Date)) |> 
+  pivot_longer(-c(1), names_to = "Site_code", values_to = "Site_Class") |> 
+  mutate(Site_Class = ifelse(Site_Class %in% c("S", "S "), "Stream", Site_Class),
+         Site_Class = ifelse(Site_Class %in% c("P", "P "), "Pool", Site_Class),
+         Site_Class = ifelse(Site_Class == "C", "Cove", Site_Class),
+         Site_Class = ifelse(Site_Class == "L", "Pelagic", Site_Class))
+
+```
+
+read in EEMS
+```{r}
+eems24 <- read.csv("../EEMs_Results_2024.csv")
+
+eems <- eems24 |> 
+    mutate(Date = mdy(Date),
+           Date = ifelse(Date == ymd("2024-08-15"), ymd("2024-08-14"), Date),
+           Date = ifelse(Date == ymd("2025-02-17"), ymd("2025-02-26"), Date),
+           Date = as.Date(Date),
+         Site_code = ifelse(Site == 101, "S1", NA),
+         Site_code = ifelse(Site == 100, "S2", Site_code),
+         Site_code = ifelse(Site == 98, "P1", Site_code),
+         Site_code = ifelse(Site == 96, "P2", Site_code),
+         Site_code = ifelse(Site == 94, "C1", Site_code),
+         Site_code = ifelse(Site == 92, "C2", Site_code),
+         Site_code = ifelse(Site == 90, "C3", Site_code),
+         Site_code = ifelse(Site == 88, "C4", Site_code),
+         Site_code = ifelse(Site == 50, "C50", Site_code)
+         ) |> 
+  dplyr::select(Reservoir, Site, Site_code, Depth_m, Date, FI., HIX., BIX., T., A., A.T., a254, a350, A254, A350, NOTES)
+
+
+eems_plotting <- left_join(eems, distances, by = c("Site_code", "Date")) |> 
+  left_join(site_class, by = c("Site_code", "Date")) |> 
+  mutate(Distance = Distance_ft*0.3048,
+         Dry_start = Dry_start*0.3048,
+         Dry_end = Dry_end*0.3048) |> 
+  filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
+  dplyr::select(Reservoir, Site, Site_code, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, FI., HIX., BIX., T., A., A.T., a254, a350, NOTES)
+
+
+eems_plotting
+
+eems_summary <- eems_plotting |> 
+  filter(!NOTES %in% c("PART", "FRIDGE_TEST")) |> 
+  filter(Site_code != "C1") |> 
+  rename(HIX = HIX.,
+         BIX = BIX.,
+         FI = FI.,
+         A = A.,
+         peakT = T.,
+         AT = A.T.) |>  #### can just change the rename here for what value you want to look at
+  dplyr::select(Site, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, HIX, BIX, FI, A, peakT, AT) |> 
+  group_by(Site, Site_Class, Depth_m, Date, Dry_start, Dry_end, Distance) |> 
+  summarise(HIX_mean = mean(HIX, na.rm = T),
+            HIX_min = min(HIX, na.rm = T),
+            HIX_max = max(HIX, na.rm = T),
+            BIX_mean = mean(BIX, na.rm = T),
+            BIX_min = min(BIX, na.rm = T),
+            BIX_max = max(BIX, na.rm = T),
+            FI_mean = mean(FI, na.rm = T),
+            A_mean = mean(A, na.rm = T),
+            T_mean = mean(peakT, na.rm = T),
+            AT_mean = mean(AT, na.rm = T)
+            ) |> 
+  mutate(Rep = ifelse(HIX_mean != HIX_min, "Y", "N"))
+
+
+
+```
+
+
+
+read in DOC
+```{r}
+
+# ccr_solubles <- read_csv("C:/Users/dwh18/OneDrive/Desktop/Alab_QAQC/EDI2025/Solubles_DOC_joined_v2.csv") |>
+#   filter(Reservoir == "CCR") |> 
+#   mutate(Date = mdy(Date),
+#          Site_code = ifelse(Site == 101, "S1", NA),
+#          Site_code = ifelse(Site == 100, "S2", Site_code),
+#          Site_code = ifelse(Site == 98, "P1", Site_code),
+#          Site_code = ifelse(Site == 96, "P2", Site_code),
+#          Site_code = ifelse(Site == 94, "C1", Site_code),
+#          Site_code = ifelse(Site == 92, "C2", Site_code),
+#          Site_code = ifelse(Site == 90, "C3", Site_code),
+#          Site_code = ifelse(Site == 88, "C4", Site_code),
+#          Site_code = ifelse(Site == 50, "C50", Site_code))
+
+```
+
+
+
+
+
+join datasets
+
 ```{r}
 #set up data
 chem <- full_join(eems_summary, solubles_summary, by = c("Site", "Date", "Depth_m")) |> 
