@@ -3,6 +3,7 @@
 #pakcages
 library(tidyverse)
 library(ggpmisc)
+library(viridis)
 #
 #### naming  -----------------------
 # Site_code_number <- data.frame(Site_code = c("CS1", "CS2", "CP1", "CP2", "CC1", "CC2", "CC3", "CC4", "C50"),
@@ -187,6 +188,42 @@ iso_plotting |>
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 
+
+## D excess sites by depth 
+iso_levels <- c("S1_0.1", "S2_0.1", "B1_0.1", "B1_BOT", "B2_0.1", "B2_BOT", "C1_0.1", "C1_BOT",
+                "C2_0.1", "C2_1.5", "C2_BOT",
+                "P1_0.1", "P1_1.5", "P1_6", "P1_9", "P1_BOT",
+                "P2_0.1", "P2_1.5", "P2_6", "P2_9", "P2_BOT")
+
+
+iso_plotting |> 
+  mutate(D_excess = d2H_VSMOW - 8*d18O_VSMOW) |> 
+  #set up naming to make sites by depth and sitee
+  mutate(Depth_new = ifelse(Site %in% c(98,96,92) & Depth_m > 0.1, "BOT", Depth_m),
+         Depth_new = ifelse(Site == 90 & Depth_m > 1.5, "BOT", Depth_new),
+         Depth_new = ifelse(Site %in% c(88,50) & Depth_m > 9, "BOT", Depth_new)
+         ) |> 
+  mutate(Site_code_new = ifelse(Site == 101, "S1", NA),
+         Site_code_new = ifelse(Site == 100, "S2", Site_code_new),
+         Site_code_new = ifelse(Site == 98, "B1", Site_code_new),
+         Site_code_new = ifelse(Site == 96, "B2", Site_code_new),
+         Site_code_new = ifelse(Site == 92, "C1", Site_code_new),
+         Site_code_new = ifelse(Site == 90, "C2", Site_code_new),
+         Site_code_new = ifelse(Site == 88, "P1", Site_code_new),
+         Site_code_new = ifelse(Site == 50, "P2", Site_code_new),
+  ) |> 
+  mutate(Site_CODE = paste(Site_code_new, Depth_new, sep = "_")) |> 
+ #make plot
+  filter(Depth_new %in% c("0.1")) |> 
+  ggplot(aes(x =Date, y = D_excess, color = factor(Site_CODE, levels = iso_levels)))+
+  geom_point(size = 3) +  geom_line(size = 1.3)+
+  labs(x = "Date", y = "D excess", color = "Site_Depth")+
+  annotate("text", x = ymd("2024-06-01"), y = 18,
+           label = "d excess = dD - 8*d18O", size = 5, color = "black", hjust = 0)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  guides(color = guide_legend(nrow = 3, byrow = TRUE))+ # Arrange legend in 2 rows, filling by row
+  scale_color_viridis_d(option = "C") #a-e are color options
 
 
 
