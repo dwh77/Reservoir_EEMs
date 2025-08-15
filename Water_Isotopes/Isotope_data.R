@@ -190,10 +190,19 @@ iso_plotting |>
 
 
 ## D excess sites by depth 
+
+iso_levels_sites <- c("S1", "S2", "B1", "B2", "C1", "C2", "P1", "P2")
+
 iso_levels <- c("S1_0.1", "S2_0.1", "B1_0.1", "B1_BOT", "B2_0.1", "B2_BOT", "C1_0.1", "C1_BOT",
                 "C2_0.1", "C2_1.5", "C2_BOT",
                 "P1_0.1", "P1_1.5", "P1_6", "P1_9", "P1_BOT",
                 "P2_0.1", "P2_1.5", "P2_6", "P2_9", "P2_BOT")
+
+iso_levels2 <- c("S1_0.1", "S2_0.1", "B1_0.1",  "B2_0.1",  "C1_0.1",  "C2_0.1", "P1_0.1", "P2_0.1",
+                 "C2_1.5", "P1_1.5", "P2_1.5", "B1_BOT",  "B2_BOT", "C1_BOT", "C2_BOT",
+                  "P1_6", "P1_9", "P1_BOT","P2_6", "P2_9", "P2_BOT")
+
+
 
 
 iso_plotting |> 
@@ -214,16 +223,21 @@ iso_plotting |>
   ) |> 
   mutate(Site_CODE = paste(Site_code_new, Depth_new, sep = "_")) |> 
  #make plot
-  filter(Depth_new %in% c("0.1")) |> 
-  ggplot(aes(x =Date, y = D_excess, color = factor(Site_CODE, levels = iso_levels)))+
+  filter(Depth_new %in% c("0.1", "BOT")) |> 
+  mutate(TOP_BOT = ifelse(Depth_new %in% c("0.1"), "TOP", "BOT")) |> 
+  ggplot(aes(x =Date, y = D_excess, 
+             #color = factor(Site_CODE, levels = iso_levels),
+             color = factor(Site_code_new, levels = iso_levels_sites),
+             linetype = factor(TOP_BOT, levels = c("TOP", "BOT"))
+             ))+
   geom_point(size = 3) +  geom_line(size = 1.3)+
-  labs(x = "Date", y = "D excess", color = "Site_Depth")+
+  labs(x = "Date", y = "D excess", color = "Site_Depth", linetype = "Depth")+
   annotate("text", x = ymd("2024-06-01"), y = 18,
            label = "d excess = dD - 8*d18O", size = 5, color = "black", hjust = 0)+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  guides(color = guide_legend(nrow = 3, byrow = TRUE))+ # Arrange legend in 2 rows, filling by row
-  scale_color_viridis_d(option = "C") #a-e are color options
+  guides(color = guide_legend(nrow = 2, byrow = TRUE))+ # Arrange legend in 2 rows, filling by row
+  scale_color_viridis_d(option = "H") #a-h are color options
 
 
 
