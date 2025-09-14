@@ -230,7 +230,7 @@ Qdata_forjoin <- Qdata |>
   select(Date, site_no, Flow) |> 
   pivot_wider(names_from = site_no, values_from = Flow, names_prefix = "Flow_")
 
-stagedata_forjoin <- stagedata |> 
+stagedata_forjoin <- stage_15min_dat |> 
   mutate(Date = as.Date(dateTime)) |> 
   group_by(Date, site_no) |> 
   summarise(Stage = mean(GH_Inst, na.rm = T)) |> 
@@ -384,6 +384,41 @@ gamsplot
 ggplotly(gamsplot)
 
 ```
+
+
+add predicted hbp to plot 
+
+```{r}
+hpb_tinker_interp <- test |> select(Date, predicted_hpb_T) 
+
+left_join(CCR_usgs_data, hpb_tinker_interp, by = "Date") |> 
+  mutate(interp = ifelse(is.na(CCR_HPB_daily_waterlevel_cm), "Interp", "Observed")) |> 
+  mutate(HPB = ifelse(is.na(CCR_HPB_daily_waterlevel_cm), predicted_hpb_T, CCR_HPB_daily_waterlevel_cm )) |> 
+
+  filter(Date >= ymd("2024-05-01")) |> 
+  filter(Date < ymd("2025-05-01")) |> 
+  select(Date, interp, CCR_MetStation_daily_rain_mm, HPB, CCR_Dam_depth_m) |> 
+
+  pivot_longer(-c(1:2)) |> 
+  ggplot(aes(x = Date, y = value, color = interp))+
+  geom_point()+
+  #scale_y_log10()+
+  geom_vline(xintercept = ymd("2024-05-22"))+  geom_vline(xintercept = ymd("2024-06-19"))+
+  geom_vline(xintercept = ymd("2024-07-11"))+  geom_vline(xintercept = ymd("2024-08-14"))+
+  geom_vline(xintercept = ymd("2024-09-16"))+  geom_vline(xintercept = ymd("2024-09-30"))+
+  geom_vline(xintercept = ymd("2024-10-28"))+  geom_vline(xintercept = ymd("2024-12-17"))+
+  geom_vline(xintercept = ymd("2025-02-26"))+  geom_vline(xintercept = ymd("2025-04-16"))+
+  facet_wrap(~factor(name, levels = c("CCR_MetStation_daily_rain_mm", "HPB", "CCR_Dam_depth_m")), ncol = 1, scales = "free_y")+
+  scale_x_date(breaks = "1 months", date_labels = "%b")+
+  labs(x= element_blank())+
+  theme_bw()+ theme(text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+
+```
+
+
 
 
 ## Get flowmate Q
