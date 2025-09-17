@@ -184,7 +184,8 @@ shapiro.test(chem$d2H_VSMOW)
 
 #Faceting
 chem |> 
-  pivot_longer(-c(1:9)) |> 
+  select(-c(FI_mean, a350_mean)) |> 
+  pivot_longer(-c(1:10)) |> 
   ggplot(aes(x = Distance, y = value, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
   #geom_smooth()+
@@ -199,8 +200,8 @@ chem |>
 
 
 #### just one variable
-#BIX
-bix_clean <- chem |> 
+#BIX  # bix_clean <- 
+chem |> 
   ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
   # geom_smooth()+
@@ -212,7 +213,7 @@ bix_clean <- chem |>
   scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))
 
-bix_clean
+
 
 ```
 
@@ -243,6 +244,8 @@ library(FSA)
 library(rcompanion)
 library(ggpubr)
 library(rlang)
+
+#### Function
 
 make_kruskal_dunn_plot <- function(df, response_var, group_var = "Site_Type_static", level_order = c("Stream", "Backwater", "Cove", "Pelagic")) {
   
@@ -282,10 +285,10 @@ make_kruskal_dunn_plot <- function(df, response_var, group_var = "Site_Type_stat
 }
 
 
-### using the function 
+#### Run function 
 response_vars <- c(
-                    #"BIX_mean", "HIX_mean", "AT_mean", "SUVA254", 
-                   #"DOC_mean", "DN_mean", "DON_mean"
+                   "BIX_mean", "HIX_mean", "AT_mean", "SUVA254", 
+                   "DOC_mean", "DN_mean", "DON_mean",
                    "NH4_mean", "NO3_mean", "PO4_mean",
                    "d18O_VSMOW", "d2H_VSMOW", "D_excess"
                    )  
@@ -299,11 +302,21 @@ plots <- lapply(response_vars, function(var) {
 names(plots) <- response_vars
 
 
-# View a specific plot
+#### Make plots 
+
+#view just one
 plots[["DOC_mean"]]  # Or use gridExtra::grid.arrange() to show multiple
 plots$BIX_mean
-plots$HIX_mean
 
+#make a few plots in groups 
+library(gridExtra)
+gridExtra::grid.arrange(plots$BIX_mean, plots$HIX_mean, plots$AT_mean, plots$SUVA254, nrow = 1) #EEM
+gridExtra::grid.arrange(plots$DOC_mean, plots$DON_mean, nrow = 1) #DOM
+gridExtra::grid.arrange(plots$NO3_mean, plots$NH4_mean, plots$DN_mean, plots$PO4_mean, nrow = 1) #Nutrients
+gridExtra::grid.arrange(plots$d18O_VSMOW, plots$d2H_VSMOW, plots$D_excess, nrow = 1) #Isotopes
+
+
+#plot all plots at once; too busy for all 13
 library(patchwork)
 wrap_plots(plots) #makes all the plots
 
@@ -318,9 +331,10 @@ Trying function to make these
 
 ```{r}
 
-### Function
 library(tidyverse)
 library(segmented)
+
+##### Function
 
 plot_segmented_breakpoint <- function(df, response_var, predictor_var = "Distance", fill_var = "Depth_m", psi_init = NULL) {
   response_sym <- rlang::sym(response_var)
@@ -384,13 +398,14 @@ plot_segmented_breakpoint <- function(df, response_var, predictor_var = "Distanc
 }
 
 
-#make plot
+#### Run Function
+
 # List of response variables to analyze
 response_vars <- c(
-                    "BIX_mean", "HIX_mean", # "AT_mean", "SUVA254", 
-                   "DOC_mean", "DN_mean", "DON_mean"
-                   #"NH4_mean", "NO3_mean", "PO4_mean",
-                   #"d18O_VSMOW", "d2H_VSMOW", "D_excess"
+                   "BIX_mean", "HIX_mean", "AT_mean", "SUVA254", 
+                   "DOC_mean", "DN_mean", "DON_mean",
+                   "NH4_mean", "NO3_mean", "PO4_mean",
+                   "d18O_VSMOW", "d2H_VSMOW", "D_excess"
                    )  
 
 # Generate segmented plots for each variable
@@ -401,14 +416,121 @@ segmented_plots <- lapply(response_vars, function(var) {
 names(segmented_plots) <- response_vars
 
 
+#### View plots 
 
+#show all plots
 library(patchwork)
 wrap_plots(segmented_plots, ncol = 3)
+
+#make a few plots in groups 
+library(gridExtra)
+#EEMs
+gridExtra::grid.arrange(segmented_plots$BIX_mean, segmented_plots$HIX_mean, 
+                        segmented_plots$AT_mean, segmented_plots$SUVA254, nrow = 1) #EEM
+#DOM
+gridExtra::grid.arrange(segmented_plots$DOC_mean, segmented_plots$DON_mean, nrow = 1) #DOM
+#Nuts
+gridExtra::grid.arrange(segmented_plots$NO3_mean, segmented_plots$NH4_mean, 
+                        segmented_plots$DN_mean, segmented_plots$PO4_mean, nrow = 1) #Nutrients
+#Iso
+gridExtra::grid.arrange(segmented_plots$d18O_VSMOW, segmented_plots$d2H_VSMOW, 
+                        segmented_plots$D_excess, nrow = 1) #Isotopes
+
 
 
 
 ```
 
+
+singular breakpoint
+
+```{r}
+### BIX
+
+#fit normal linear regression 
+my.lm <- lm(BIX_mean ~ Distance, data = chem)
+summary(my.lm)
+
+#Run breakpoint
+my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
+summary(my.seg)
+my.seg$psi
+slope(my.seg)
+
+#fit breakpoint segments to distance data
+my.fitted <- fitted(my.seg)
+my.model <- data.frame(Distance = chem$Distance, BIX_fit = my.fitted)
+
+#get breakpoint lines
+my.lines <- my.seg$psi[ , 2]
+
+#plot
+chem |> 
+  ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m))+
+  geom_point(shape = 21, size = 4) + #shape = 21,
+  # geom_smooth()+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)", y = "BIX", fill = "Depth (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))+
+  #geom_smooth()+
+  geom_vline(xintercept = my.lines, linetype = "dashed", size = 1.5) +
+  geom_line(data = my.model, aes(x = Distance, y = BIX_fit), size = 1, inherit.aes = FALSE ) 
+
+
+
+
+```
+
+Breakpoint stats for each
+
+```{r}
+#BIX
+my.lm <- lm(BIX_mean ~ Distance, data = chem)
+my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
+summary(my.seg)
+my.seg$psi
+slope(my.seg)
+
+
+#HIX
+my.lm <- lm(HIX_mean ~ Distance, data = chem)
+my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
+summary(my.seg)
+my.seg$psi
+slope(my.seg)
+
+#DOC
+my.lm <- lm(DOC_mean ~ Distance, data = chem)
+my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
+summary(my.seg)
+my.seg$psi
+slope(my.seg)
+
+
+#DON
+my.lm <- lm(DON_mean ~ Distance, data = chem)
+my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
+summary(my.seg)
+my.seg$psi
+slope(my.seg)
+
+
+#DN
+my.lm <- lm(DN_mean ~ Distance, data = chem)
+my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
+summary(my.seg)
+my.seg$psi
+slope(my.seg)
+
+
+
+
+
+```
 
 
 
