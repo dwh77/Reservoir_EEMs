@@ -11,9 +11,10 @@ knitr::opts_chunk$set(echo = TRUE)
 Packages
 ```{r}
 library(ggpubr) # for ggdensity
-library(segmented)
+library(segmented) #for breakpoints
 library(tidyverse)
 ```
+
 
 ## Set up data
 
@@ -25,14 +26,14 @@ Site_code_number <- data.frame(Site_code = c("CS1", "CS2", "CP1", "CP2", "CC1", 
                                Site_number = c(101, 100, 98, 96, 94, 92, 90, 88, 50))
 
 ## bring in distances and site class table from google sheets; have to redownload locally each time 
-distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances (2).csv") |> 
+distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances.csv") |> 
   mutate(Date = mdy(Date)) |> 
   dplyr::select(-c(13,14)) |> 
   pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft") |> 
   filter(!Site_code == "C1") 
 
 
-site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class (2).csv") |> 
+site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class.csv") |> 
   dplyr::select(-X, -Key) |> 
   mutate(Date = mdy(Date)) |> 
   pivot_longer(-c(1), names_to = "Site_code", values_to = "Site_Class") |> 
@@ -43,50 +44,37 @@ site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_C
 
 ```
 
-read in EEMS
+
+read in data sets
+
 ```{r}
+#### Isotopes ###
+iso24 <- read.csv("../Water_Isotopes/isotopes_named.csv") |> 
+  rename(Site = Site_number) |> 
+  filter(Site != 51) |> 
+    filter(Site != 94) |> 
+  mutate(Date = mdy(Date))
+
+
+#### EEMS ###
 eems24 <- read.csv("../EEMs_Results_2024.csv")
 
 eems <- eems24 |> 
     mutate(Date = mdy(Date),
            Date = ifelse(Date == ymd("2024-08-15"), ymd("2024-08-14"), Date),
            Date = ifelse(Date == ymd("2025-02-17"), ymd("2025-02-26"), Date),
-           Date = as.Date(Date),
-         Site_code = ifelse(Site == 101, "S1", NA),
-         Site_code = ifelse(Site == 100, "S2", Site_code),
-         Site_code = ifelse(Site == 98, "P1", Site_code),
-         Site_code = ifelse(Site == 96, "P2", Site_code),
-         Site_code = ifelse(Site == 94, "C1", Site_code),
-         Site_code = ifelse(Site == 92, "C2", Site_code),
-         Site_code = ifelse(Site == 90, "C3", Site_code),
-         Site_code = ifelse(Site == 88, "C4", Site_code),
-         Site_code = ifelse(Site == 50, "C50", Site_code)
-         ) |> 
-  dplyr::select(Reservoir, Site, Site_code, Depth_m, Date, FI., HIX., BIX., T., A., A.T., a254, a350, A254, A350, NOTES)
-
-
-eems_plotting <- left_join(eems, distances, by = c("Site_code", "Date")) |> 
-  left_join(site_class, by = c("Site_code", "Date")) |> 
-  mutate(Distance = Distance_ft*0.3048,
-         Dry_start = Dry_start*0.3048,
-         Dry_end = Dry_end*0.3048) |> 
-  filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
-  dplyr::select(Reservoir, Site, Site_code, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, FI., HIX., BIX., T., A., A.T., a254, a350, NOTES)
-
-
-eems_plotting
-
-eems_summary <- eems_plotting |> 
-  filter(!NOTES %in% c("PART", "FRIDGE_TEST")) |> 
-  filter(Site_code != "C1") |> 
+           Date = as.Date(Date)) |> 
+    filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
+    filter(!NOTES %in% c("PART", "FRIDGE_TEST")) |> 
+  filter(Site != 94) |> 
   rename(HIX = HIX.,
          BIX = BIX.,
          FI = FI.,
          A = A.,
          peakT = T.,
          AT = A.T.) |>  #### can just change the rename here for what value you want to look at
-  dplyr::select(Site, Site_Class, Depth_m, Date, Distance, Dry_start, Dry_end, HIX, BIX, FI, A, peakT, AT) |> 
-  group_by(Site, Site_Class, Depth_m, Date, Dry_start, Dry_end, Distance) |> 
+  dplyr::select(Site, Depth_m, Date, HIX, BIX, FI, A, peakT, AT, a254, a350) |> 
+  group_by(Site, Depth_m, Date) |> 
   summarise(HIX_mean = mean(HIX, na.rm = T),
             HIX_min = min(HIX, na.rm = T),
             HIX_max = max(HIX, na.rm = T),
@@ -96,52 +84,82 @@ eems_summary <- eems_plotting |>
             FI_mean = mean(FI, na.rm = T),
             A_mean = mean(A, na.rm = T),
             T_mean = mean(peakT, na.rm = T),
-            AT_mean = mean(AT, na.rm = T)
+            AT_mean = mean(AT, na.rm = T),
+            a254_mean = mean(a254, na.rm = T),
+            a350_mean = mean(a350, na.rm = T)
             ) |> 
   mutate(Rep = ifelse(HIX_mean != HIX_min, "Y", "N"))
 
+#### chem 
+edi_chem <- read.csv("https://pasta.lternet.edu/package/data/eml/edi/199/13/3f09a3d23b7b5dd32ed7d28e9bc1b081" )
+
+doc <- edi_chem |> 
+  filter(Reservoir == "CCR",
+         DateTime > ymd("2024-05-01")) |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
+  select(Site, Depth_m, Date, DOC_mgL, DN_mgL, NO3NO2_ugL, NH4_ugL, SRP_ugL) |>
+  group_by(Site, Depth_m, Date) |>
+  summarise(DOC_mean = mean(DOC_mgL, na.rm = T),
+            DOC_min = min(DOC_mgL, na.rm = T),
+            DOC_max = max(DOC_mgL, na.rm = T),
+            DN_mean = mean(DN_mgL, na.rm = T),
+            DN_min = min(DN_mgL, na.rm = T),
+            DN_max = max(DN_mgL, na.rm = T),
+            PO4_mean = mean(SRP_ugL, na.rm = T),
+            PO4_min = min(SRP_ugL, na.rm = T),
+            PO4_max = max(SRP_ugL, na.rm = T),
+            NH4_mean = mean(NH4_ugL, na.rm = T),
+            NH4_min = min(NH4_ugL, na.rm = T),
+            NH4_max = max(NH4_ugL, na.rm = T),
+            NO3_mean = mean(NO3NO2_ugL, na.rm = T),
+            NO3_min = min(NO3NO2_ugL, na.rm = T),
+            NO3_max = max(NO3NO2_ugL, na.rm = T)
+                        ) |>
+  mutate(Rep = ifelse(DOC_mean != DOC_min, "Y", "N")) |> 
+  mutate(Site = as.numeric(Site))
 
 
-```
 
-
-
-read in DOC
-```{r}
-
-# ccr_solubles <- read_csv("C:/Users/dwh18/OneDrive/Desktop/Alab_QAQC/EDI2025/Solubles_DOC_joined_v2.csv") |>
-#   filter(Reservoir == "CCR") |> 
-#   mutate(Date = mdy(Date),
-#          Site_code = ifelse(Site == 101, "S1", NA),
-#          Site_code = ifelse(Site == 100, "S2", Site_code),
-#          Site_code = ifelse(Site == 98, "P1", Site_code),
-#          Site_code = ifelse(Site == 96, "P2", Site_code),
-#          Site_code = ifelse(Site == 94, "C1", Site_code),
-#          Site_code = ifelse(Site == 92, "C2", Site_code),
-#          Site_code = ifelse(Site == 90, "C3", Site_code),
-#          Site_code = ifelse(Site == 88, "C4", Site_code),
-#          Site_code = ifelse(Site == 50, "C50", Site_code))
-
-```
-
-
-
-
-
-join datasets
-
-```{r}
-#set up data
-chem <- full_join(eems_summary, solubles_summary, by = c("Site", "Date", "Depth_m")) |> 
-  full_join(iso_plotting, by = c("Site", "Date", "Depth_m")) |> 
+#### Bring data together ###
+chem <- left_join(doc, eems, by = c("Date", "Depth_m", "Site")) |> 
+  left_join(iso24, by = c("Date", "Depth_m", "Site")) |> 
+  mutate(Site_code = ifelse(Site == 101, "S1", NA),
+         Site_code = ifelse(Site == 100, "S2", Site_code),
+         Site_code = ifelse(Site == 98, "P1", Site_code),
+         Site_code = ifelse(Site == 96, "P2", Site_code),
+         Site_code = ifelse(Site == 94, "C1", Site_code),
+         Site_code = ifelse(Site == 92, "C2", Site_code),
+         Site_code = ifelse(Site == 90, "C3", Site_code),
+         Site_code = ifelse(Site == 88, "C4", Site_code),
+         Site_code = ifelse(Site == 50, "C50", Site_code)) |> 
+  left_join(distances, by = c("Site_code", "Date")) |> 
+  left_join(site_class, by = c("Site_code", "Date")) |> 
+  mutate(Distance = Distance_ft*0.3048,
+         Dry_start = Dry_start*0.3048,
+         Dry_end = Dry_end*0.3048) |> 
   mutate(Site_Class = ifelse(Site_Class == "Pool", "Backwater", Site_Class)) |> 
   mutate(Site_Type_static = ifelse(Site %in% c(50,88), "Pelagic", NA),
          Site_Type_static = ifelse(Site %in% c(90,92), "Cove", Site_Type_static),
          Site_Type_static = ifelse(Site %in% c(96,98), "Backwater", Site_Type_static),
          Site_Type_static = ifelse(Site %in% c(100,101), "Stream", Site_Type_static)
-  ) 
+  ) |> 
+  filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
+  mutate(DON_mean = DN_mean - ((NO3_mean + NH4_mean)/1000)) |> 
+  mutate(SUVA254 = a254_mean / DOC_mean) |> 
+  mutate(D_excess = d2H_VSMOW - 8*d18O_VSMOW) |> 
+  dplyr::select(Reservoir, Site, Site_code, Site_Class, Site_Type_static, 
+                Depth_m, Date, Distance, Dry_start, Dry_end, 
+                FI_mean, HIX_mean, BIX_mean, T_mean, A_mean, AT_mean, a254_mean, a350_mean, SUVA254,
+                DOC_mean, DN_mean, DON_mean, PO4_mean, NO3_mean, NH4_mean,
+                d18O_VSMOW, d2H_VSMOW, D_excess)
+
+
+rm(distances, edi_chem, doc, eems,eems24, iso24)
+
 
 ```
+
 
 
 ## Normality test
@@ -163,23 +181,24 @@ shapiro.test(chem$d2H_VSMOW)
 ## Make nice plots of each variable
 
 ```{r}
-## make nice plots
 
-#DOC
-doc_clean <- chem |> 
-  ggplot(aes(x = Distance, y = DOC_mean, fill = Depth_m))+
+#Faceting
+chem |> 
+  pivot_longer(-c(1:9)) |> 
+  ggplot(aes(x = Distance, y = value, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
-  # geom_smooth()+
+  #geom_smooth()+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x= "Distance from Stream (m)", y = "DOC (mg/L)", fill = "Depth (m)",
-       shape = "Site Type")+
+  labs(x= "Distance from Stream (m)", fill = "Depth (m)")+
   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+    facet_wrap(~name, scales = "free_y")+
   scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))
 
-doc_clean
 
+
+#### just one variable
 #BIX
 bix_clean <- chem |> 
   ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m))+
@@ -195,38 +214,9 @@ bix_clean <- chem |>
 
 bix_clean
 
-#BIX
-hix_clean <- chem |> 
-  ggplot(aes(x = Distance, y = HIX_mean, fill = Depth_m))+
-  geom_point(shape = 21, size = 4) + #shape = 21,
-  # geom_smooth()+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x= "Distance from Stream (m)", y = "HIX", fill = "Depth (m)",
-       shape = "Site Type")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
-  scale_fill_gradient2(low = "red",  high ="blue",
-                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))
-
-hix_clean
-
-#d2H
-d2H_clean <- chem |> 
-  ggplot(aes(x = Distance, y = d2H_VSMOW, fill = Depth_m))+
-  geom_point(shape = 21, size = 4) + #shape = 21,
-  # geom_smooth()+
-  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x= "Distance from Stream (m)", y = "d2H (VSMOW)", fill = "Depth (m)",
-       shape = "Site Type")+
-  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
-  scale_fill_gradient2(low = "red",  high ="blue",
-                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))
-
-d2H_clean
-
-
 ```
+
+
 
 
 ## Make boxplots across sites for each variable 
@@ -244,267 +234,187 @@ chem |>   group_by(Site_Type_static) |>
 ```
 
 
-BIX boxplots
+
+Try function for making all the boxplots
+
 ```{r}
-#### By Site Type (Static)
+library(tidyverse)
+library(FSA)
+library(rcompanion)
+library(ggpubr)
+library(rlang)
 
-#kruskal and dunn test
-kruskal <- kruskal.test(BIX_mean ~ Site_Type_static, data = chem)
-kruskal
-dunn <- FSA::dunnTest(BIX_mean ~ Site_Type_static, data = chem)
-dunn_letters <- dunn$res
-dunn_letters_list <- rcompanion::cldList(comparison = dunn_letters$Comparison, p.value = dunn_letters$P.adj, threshold = 0.05)
+make_kruskal_dunn_plot <- function(df, response_var, group_var = "Site_Type_static", level_order = c("Stream", "Backwater", "Cove", "Pelagic")) {
+  
+  group_sym <- rlang::sym(group_var)
+  response_sym <- rlang::sym(response_var)
+  
+  formula <- as.formula(paste(response_var, "~", group_var))
+  kruskal <- kruskal.test(formula, data = df)
+  dunn <- FSA::dunnTest(formula, data = df)
+  dunn_letters <- dunn$res
+  
+  dunn_letters_list <- rcompanion::cldList(
+    comparison = dunn_letters$Comparison,
+    p.value = dunn_letters$P.adj,
+    threshold = 0.05
+  )
+  
+  df_plot <- df %>%
+    left_join(dunn_letters_list, by = setNames("Group", group_var))
+  
+  # Calculate dynamic label position
+  y_max <- max(df[[response_var]], na.rm = TRUE)
+  label_y <- y_max + 0.01 * abs(y_max)  # Add 10% buffer above max
+  
+  p <- ggplot(df_plot, aes(x = factor(!!group_sym, levels = level_order), y = !!response_sym)) +
+    geom_boxplot(outlier.alpha = 0) +
+    geom_jitter(width = 0.2) +
+    stat_compare_means(method = "kruskal.test", label.y = label_y * 0.9, label.x = 1.3, size = 4) +
+    geom_text(aes(label = Letter), y = label_y, size = 5) +
+    theme_bw() +
+    theme(text = element_text(size = 18),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank()) +
+    labs(x = "Site Type (Static)", y = response_var)
+  
+  return(p)
+}
 
-level_order <- c("Stream", "Backwater", "Cove", "Pelagic")
- 
-bix_boxplot_type <- left_join(chem, dunn_letters_list, by = c("Site_Type_static" = "Group")) %>%
-  ggplot(aes(x = factor(Site_Type_static, level = level_order), y = BIX_mean))+   
-  geom_boxplot(outlier.alpha = 0)+ #, outlier.alpha = 0
-  #geom_violin()+
-  geom_jitter(width = 0.2)+
-  stat_compare_means(method = "kruskal.test", label.y = 0.94, label.x = 1.3, size = 4)+ 
-  geom_text(aes(x = Site_Type_static, label = Letter), y = 0.92, size = 5)+
-  theme_bw()+ theme(text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x = "Site Type (Static)", y = "BIX")
 
-bix_boxplot_type
+### using the function 
+response_vars <- c(
+                    #"BIX_mean", "HIX_mean", "AT_mean", "SUVA254", 
+                   #"DOC_mean", "DN_mean", "DON_mean"
+                   "NH4_mean", "NO3_mean", "PO4_mean",
+                   "d18O_VSMOW", "d2H_VSMOW", "D_excess"
+                   )  
+
+# Generate plots for each variable
+plots <- lapply(response_vars, function(var) {
+  make_kruskal_dunn_plot(chem, response_var = var)
+})
+
+# Optionally name the plots
+names(plots) <- response_vars
 
 
+# View a specific plot
+plots[["DOC_mean"]]  # Or use gridExtra::grid.arrange() to show multiple
+plots$BIX_mean
+plots$HIX_mean
 
-
-
-#### By Site Class (Changes)
-
-#kruskal and dunn test
-kruskal <- kruskal.test(BIX_mean ~ Site_Class, data = chem)
-kruskal
-dunn <- FSA::dunnTest(BIX_mean ~ Site_Class, data = chem)
-dunn_letters <- dunn$res
-dunn_letters_list <- rcompanion::cldList(comparison = dunn_letters$Comparison, p.value = dunn_letters$P.adj, threshold = 0.05)
-
-level_order <- c("Stream", "Backwater", "Cove", "Pelagic")
- 
-left_join(chem, dunn_letters_list, by = c("Site_Class" = "Group")) %>%
-  ggplot(aes(x = factor(Site_Class, level = level_order), y = BIX_mean))+   
-  geom_boxplot(outlier.alpha = 0)+ #, outlier.alpha = 0
-  #geom_violin()+
-  geom_jitter(width = 0.2)+
-  stat_compare_means(method = "kruskal.test", label.y = 0.94, label.x = 1.3, size = 4)+ 
-  geom_text(aes(x = Site_Class, label = Letter), y = 0.92, size = 5)+
-  theme_bw()+ theme(text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x = "Site Class (Changes)", y = "BIX")
-
-```
-
-HIX boxplots
-```{r}
-#### By Site Type (Static)
-
-#kruskal and dunn test
-kruskal <- kruskal.test(HIX_mean ~ Site_Type_static, data = chem)
-kruskal
-dunn <- FSA::dunnTest(HIX_mean ~ Site_Type_static, data = chem)
-dunn_letters <- dunn$res
-dunn_letters_list <- rcompanion::cldList(comparison = dunn_letters$Comparison, p.value = dunn_letters$P.adj, threshold = 0.05)
-
-level_order <- c("Stream", "Backwater", "Cove", "Pelagic")
- 
-hix_boxplot_type <- left_join(chem, dunn_letters_list, by = c("Site_Type_static" = "Group")) %>%
-  ggplot(aes(x = factor(Site_Type_static, level = level_order), y = HIX_mean))+   
-  geom_boxplot(outlier.alpha = 0)+ #, outlier.alpha = 0
-  #geom_violin()+
-  geom_jitter(width = 0.2)+
-  stat_compare_means(method = "kruskal.test", label.y = 13.3, label.x = 1.3, size = 4)+ 
-  geom_text(aes(x = Site_Type_static, label = Letter), y = 13, size = 5)+
-  theme_bw()+ theme(text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x = "Site Type (Static)", y = "HIX")
-
-hix_boxplot_type
+library(patchwork)
+wrap_plots(plots) #makes all the plots
 
 
 ```
 
-DOC boxplots
-```{r}
-#### By Site Type (Static)
-
-#kruskal and dunn test
-kruskal <- kruskal.test(DOC_mean ~ Site_Type_static, data = chem)
-kruskal
-dunn <- FSA::dunnTest(DOC_mean ~ Site_Type_static, data = chem)
-dunn_letters <- dunn$res
-dunn_letters_list <- rcompanion::cldList(comparison = dunn_letters$Comparison, p.value = dunn_letters$P.adj, threshold = 0.05)
-
-level_order <- c("Stream", "Backwater", "Cove", "Pelagic")
- 
-doc_boxplot_type <- left_join(chem, dunn_letters_list, by = c("Site_Type_static" = "Group")) %>%
-  ggplot(aes(x = factor(Site_Type_static, level = level_order), y = DOC_mean))+   
-  geom_boxplot(outlier.alpha = 0)+ #, outlier.alpha = 0
-  #geom_violin()+
-  geom_jitter(width = 0.2)+
-  stat_compare_means(method = "kruskal.test", label.y = 5, label.x = 1.3, size = 4)+ 
-  geom_text(aes(x = Site_Type_static, label = Letter), y = 4.8, size = 5)+
-  theme_bw()+ theme(text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x = "Site Type (Static)", y = "DOC (mg/L)")
-
-doc_boxplot_type
-
-
-```
-
-d2H boxplots
-```{r}
-#### By Site Type (Static)
-
-#kruskal and dunn test
-kruskal <- kruskal.test(d2H_VSMOW ~ Site_Type_static, data = chem)
-kruskal
-dunn <- FSA::dunnTest(d2H_VSMOW ~ Site_Type_static, data = chem)
-dunn_letters <- dunn$res
-dunn_letters_list <- rcompanion::cldList(comparison = dunn_letters$Comparison, p.value = dunn_letters$P.adj, threshold = 0.05)
-
-level_order <- c("Stream", "Backwater", "Cove", "Pelagic")
- 
-d2H_boxplot_type <- left_join(chem, dunn_letters_list, by = c("Site_Type_static" = "Group")) %>%
-  ggplot(aes(x = factor(Site_Type_static, level = level_order), y = d2H_VSMOW))+   
-  geom_boxplot(outlier.alpha = 0)+ #, outlier.alpha = 0
-  #geom_violin()+
-  geom_jitter(width = 0.2)+
-  stat_compare_means(method = "kruskal.test", label.y = -22, label.x = 1.3, size = 4)+ 
-  geom_text(aes(x = Site_Type_static, label = Letter), y = -23, size = 5)+
-  theme_bw()+ theme(text = element_text(size = 18),
-                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  labs(x = "Site Type (Static)", y = "d2H (% VSMOW)")
-
-d2H_boxplot_type
-
-
-```
 
 
 ## Breakpoints 
 
-BIX
+Trying function to make these 
+
 ```{r}
-#fit normal linear regression 
-my.lm <- lm(BIX_mean ~ Distance, data = chem)
-summary(my.lm)
 
-#Run breakpoint
-my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
-summary(my.seg)
-my.seg$psi
-slope(my.seg)
+### Function
+library(tidyverse)
+library(segmented)
 
-#fit breakpoint segments to distance data
-my.fitted <- fitted(my.seg)
-my.model <- data.frame(Distance = chem$Distance, BIX_fit = my.fitted)
+plot_segmented_breakpoint <- function(df, response_var, predictor_var = "Distance", fill_var = "Depth_m", psi_init = NULL) {
+  response_sym <- rlang::sym(response_var)
+  predictor_sym <- rlang::sym(predictor_var)
+  fill_sym <- rlang::sym(fill_var)
 
-#get breakpoint lines
-my.lines <- my.seg$psi[ , 2]
+  # Use median as default psi if not provided
+  if (is.null(psi_init)) {
+    psi_init <- quantile(df[[predictor_var]], probs = 0.5, na.rm = TRUE)
+  }
 
-#plot
-bix_breakpoint <- bix_clean+
-  #geom_smooth()+
-  geom_vline(xintercept = my.lines, linetype = "dashed", size = 1.5) +
-  geom_line(data = my.model, aes(x = Distance, y = BIX_fit), size = 1, inherit.aes = FALSE ) 
+  # Base scatter plot
+  base_plot <- ggplot(df, aes(x = !!predictor_sym, y = !!response_sym, fill = !!fill_sym)) +
+    geom_point(shape = 21, size = 4) +
+    theme_bw() +
+    theme(legend.position = "top", text = element_text(size = 18),
+          panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    labs(x = paste(predictor_var, "(m)"), y = response_var, fill = paste(fill_var, "(m)")) +
+    scale_x_continuous(breaks = c(0, 500, 1000, 1500)) +
+    scale_fill_gradient2(low = "red", high = "blue", midpoint = 6,
+                         guide = "colourbar", breaks = c(3, 6, 9, 15))
 
-bix_breakpoint
+  # Fit linear model
+  lm_fit <- lm(as.formula(paste(response_var, "~", predictor_var)), data = df)
+
+  # Try segmented fit
+  seg_fit <- tryCatch({
+    segmented(lm_fit, seg.Z = as.formula(paste("~", predictor_var)), psi = psi_init)
+  }, error = function(e) {
+    warning(paste("Segmented fit failed for", response_var, ":", e$message))
+    return(NULL)
+  })
+
+  # If segmented failed, return base plot with note
+  if (is.null(seg_fit)) {
+    return(base_plot + ggtitle(paste(response_var, "(segmented fit failed)")))
+  }
+
+  # Extract fitted values and breakpoints
+  fitted_vals <- fitted(seg_fit)
+  df_fitted <- data.frame(Distance = df[[predictor_var]], Fitted = fitted_vals)
+  breakpoints <- seg_fit$psi[, "Est."]
+
+  # Extract slope and breakpoint summary
+  slope_info <- slope(seg_fit)[[predictor_var]]
+  bp_text <- paste0("Breakpoint at ", round(breakpoints, 1), " m\n",
+                    "Slope 1: ", round(slope_info[1, "Est."], 3), "\n",
+                    "Slope 2: ", round(slope_info[2, "Est."], 3))
+
+  # Dynamic label position
+  y_max <- max(df[[response_var]], na.rm = TRUE)
+  label_y <- y_max + 0.1 * abs(y_max)
+
+  # Final plot
+  final_plot <- base_plot +
+    geom_vline(xintercept = breakpoints, linetype = "dashed", size = 1.5) +
+    geom_line(data = df_fitted, aes(x = Distance, y = Fitted), size = 1, inherit.aes = FALSE) +
+    annotate("text", x = breakpoints + 100, y = label_y, label = bp_text, hjust = 0, size = 5)
+
+  return(final_plot)
+}
+
+
+#make plot
+# List of response variables to analyze
+response_vars <- c(
+                    "BIX_mean", "HIX_mean", # "AT_mean", "SUVA254", 
+                   "DOC_mean", "DN_mean", "DON_mean"
+                   #"NH4_mean", "NO3_mean", "PO4_mean",
+                   #"d18O_VSMOW", "d2H_VSMOW", "D_excess"
+                   )  
+
+# Generate segmented plots for each variable
+segmented_plots <- lapply(response_vars, function(var) {
+  plot_segmented_breakpoint(chem, response_var = var)
+})
+
+names(segmented_plots) <- response_vars
+
+
+
+library(patchwork)
+wrap_plots(segmented_plots, ncol = 3)
+
+
 
 ```
 
 
-HIX
-```{r}
-#fit normal linear regression 
-my.lm <- lm(HIX_mean ~ Distance, data = chem)
-summary(my.lm)
-
-#Run breakpoint
-my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
-summary(my.seg)
-my.seg$psi
-slope(my.seg)
-
-#fit breakpoint segments to distance data
-my.fitted <- fitted(my.seg)
-my.model <- data.frame(Distance = chem$Distance, HIX_fit = my.fitted)
-
-#get breakpoint lines
-my.lines <- my.seg$psi[ , 2]
-
-#plot
-hix_breakpoint <- hix_clean+
-  #geom_smooth()+
-  geom_vline(xintercept = my.lines, linetype = "dashed", size = 1.5) +
-  geom_line(data = my.model, aes(x = Distance, y = HIX_fit), size = 1, inherit.aes = FALSE ) 
-
-hix_breakpoint
-
-```
-
-DOC
-```{r}
-#fit normal linear regression 
-my.lm <- lm(DOC_mean ~ Distance, data = chem)
-summary(my.lm)
-
-#Run breakpoint
-my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
-summary(my.seg)
-my.seg$psi
-slope(my.seg)
-
-#fit breakpoint segments to distance data
-my.fitted <- fitted(my.seg)
-my.model <- data.frame(Distance = chem$Distance, DOC_fit = my.fitted)
-
-#get breakpoint lines
-my.lines <- my.seg$psi[ , 2]
-
-#plot
-doc_breakpoint <- doc_clean+
-  #geom_smooth()+
-  geom_vline(xintercept = my.lines, linetype = "dashed", size = 1.5) +
-  geom_line(data = my.model, aes(x = Distance, y = DOC_fit), size = 1, inherit.aes = FALSE ) 
-
-doc_breakpoint
-
-```
 
 
-d2H
-```{r}
-#fit normal linear regression 
-my.lm <- lm(d2H_VSMOW ~ Distance, data = chem)
-summary(my.lm)
 
-#Run breakpoint
-my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
-summary(my.seg)
-my.seg$psi
-slope(my.seg)
 
-#fit breakpoint segments to distance data
-my.fitted <- fitted(my.seg)
-my.model <- data.frame(Distance = chem$Distance, d2H_fit = my.fitted)
 
-#get breakpoint lines
-my.lines <- my.seg$psi[ , 2]
-
-#plot
-d2H_breakpoint <- d2H_clean+
-  #geom_smooth()+
-  geom_vline(xintercept = my.lines, linetype = "dashed", size = 1.5) +
-  geom_line(data = my.model, aes(x = Distance, y = d2H_fit), size = 1, inherit.aes = FALSE ) 
-
-d2H_breakpoint
-
-```
 
 ## Put figures together
 
