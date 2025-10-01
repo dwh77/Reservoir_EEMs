@@ -596,3 +596,93 @@ doc_breakpoint | hix_breakpoint
 
 
 
+## Sensor figures
+
+```{r}
+#read in data
+sensors <- read.csv("./Sensor_Data_compiled.csv") |> 
+   mutate(Site_code = ifelse(Site == 101, "S1", NA),
+         Site_code = ifelse(Site == 100, "S2", Site_code),
+         Site_code = ifelse(Site == 98, "P1", Site_code),
+         Site_code = ifelse(Site == 96, "P2", Site_code),
+         Site_code = ifelse(Site == 94, "C1", Site_code),
+         Site_code = ifelse(Site == 92, "C2", Site_code),
+         Site_code = ifelse(Site == 90, "C3", Site_code),
+         Site_code = ifelse(Site == 88, "C4", Site_code),
+         Site_code = ifelse(Site == 50, "C50", Site_code)
+         ) |> 
+  mutate(Date = as.Date(Date)) |> 
+    filter(Site != 94) #remove old site C1
+
+
+sensors <- left_join(sensors, distances, by = c("Site_code", "Date")) |>
+    mutate(Distance = Distance_ft*0.3048,
+         Dry_start = Dry_start*0.3048,
+         Dry_end = Dry_end*0.3048) |> 
+  left_join(site_class, by = c("Site_code", "Date")) |> 
+  select(Reservoir, Site, Site_code, Site_Class, Date, Distance, Dry_start, Dry_end, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm)
+
+
+```
+
+
+all variables by date plot 
+
+```{r}
+
+sensors |> 
+  select(-DO_mgL) |> 
+  pivot_longer(-c(1:9)) |> 
+  # filter(name == "Temp_C") |> 
+  ggplot(aes(x = Distance, y = value, fill = Depth_m,
+             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
+  facet_grid(name~Date, scales = "free_y")+
+  geom_point(size = 3)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
+  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
+  # scale_color_gradient(high = "red", low = "blue") +
+  # scale_fill_gradient(high = "red", low = "blue") 
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
+
+
+```
+
+
+zoom in on shallow sites
+
+```{r}
+
+sensors |> 
+  filter(!Site %in% c(50,88,90)) |> 
+  select(-DO_mgL) |> 
+  pivot_longer(-c(1:9)) |> 
+  # filter(name == "Temp_C") |> 
+  ggplot(aes(x = Distance, y = value, fill = Depth_m,
+             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
+  facet_grid(name~Date, scales = "free_y")+
+  geom_point(size = 3)+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 150, 300))+ #c(250, 750)
+  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 0.7,  guide = "colourbar", breaks = c(0,1,2,3))
+
+
+```
+
+
+
+
+

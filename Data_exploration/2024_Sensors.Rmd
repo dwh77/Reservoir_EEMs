@@ -48,7 +48,7 @@ CTD cleaning function
 ccr_ctd_clean <- function(data){
 
   #slice by depth for each reservoir
-    depths = seq(0.1, 21, by = 0.5)
+    depths = seq(0.1, 21, by = 0.1)
     df.final<-data.frame()
 
  for (i in 1:length(depths)){
@@ -95,19 +95,19 @@ ccr_ctd_24 <- ccr_ctd_clean(ccr_ctd_24)
 
 ```{r}
 ## grab distances and site class to bind in 
-distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances (2).csv") |> 
-  mutate(Date = mdy(Date)) |> 
-  select(-c(13,14)) |> 
-  pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft")
-
-site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class (2).csv") |> 
-  select(-X, -Key) |> 
-  mutate(Date = mdy(Date)) |> 
-  pivot_longer(-c(1), names_to = "Site_code", values_to = "Site_Class") |> 
-  mutate(Site_Class = ifelse(Site_Class %in% c("S", "S "), "Stream", Site_Class),
-         Site_Class = ifelse(Site_Class %in% c("P", "P "), "Pool", Site_Class),
-         Site_Class = ifelse(Site_Class == "C", "Cove", Site_Class),
-         Site_Class = ifelse(Site_Class == "L", "Pelagic", Site_Class))
+# distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances (2).csv") |> 
+#   mutate(Date = mdy(Date)) |> 
+#   select(-c(13,14)) |> 
+#   pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft")
+# 
+# site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class (2).csv") |> 
+#   select(-X, -Key) |> 
+#   mutate(Date = mdy(Date)) |> 
+#   pivot_longer(-c(1), names_to = "Site_code", values_to = "Site_Class") |> 
+#   mutate(Site_Class = ifelse(Site_Class %in% c("S", "S "), "Stream", Site_Class),
+#          Site_Class = ifelse(Site_Class %in% c("P", "P "), "Pool", Site_Class),
+#          Site_Class = ifelse(Site_Class == "C", "Cove", Site_Class),
+#          Site_Class = ifelse(Site_Class == "L", "Pelagic", Site_Class))
 
 
 
@@ -115,6 +115,7 @@ site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_C
 ctd_bind <- ccr_ctd_24 |> 
   select(Reservoir, Site, Date, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm) |> 
   filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"), ymd("2024-08-15")),
+         Date > ymd("2024-05-20"),
          Date < ymd("2025-04-17"))   #non EEM sample days
   # mutate(SpCond_uScm = ifelse(SpCond_uScm < 100, NA, SpCond_uScm)  ) # remove low values that aren't realistic
 
@@ -122,40 +123,48 @@ ysi_bind <- ccr_ysi |>
   select(Reservoir, Site, Date, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm) |> 
   filter(!Site %in% c(88,90))
 
-sensors_nodistance <- rbind(ctd_bind, ysi_bind) |> 
-  # mutate(Distance_ft = ifelse(Site == 101, 0, NA),
-  #        Distance_ft = ifelse(Site == 100, 407, Distance_ft),
-  #        Distance_ft = ifelse(Site == 98, 619, Distance_ft),
-  #        Distance_ft = ifelse(Site == 96, 790, Distance_ft),
-  #        Distance_ft = ifelse(Site == 94, 1015, Distance_ft),
-  #        Distance_ft = ifelse(Site == 92, 1132, Distance_ft),
-  #        Distance_ft = ifelse(Site == 90, 1843, Distance_ft),
-  #        Distance_ft = ifelse(Site == 88, 3326, Distance_ft),
-  #        Distance_ft = ifelse(Site == 50, 5011, Distance_ft)
-  #        ) |> 
-  mutate(Site_code = ifelse(Site == 101, "S1", NA),
-         Site_code = ifelse(Site == 100, "S2", Site_code),
-         Site_code = ifelse(Site == 98, "P1", Site_code),
-         Site_code = ifelse(Site == 96, "P2", Site_code),
-         Site_code = ifelse(Site == 94, "C1", Site_code),
-         Site_code = ifelse(Site == 92, "C2", Site_code),
-         Site_code = ifelse(Site == 90, "C3", Site_code),
-         Site_code = ifelse(Site == 88, "C4", Site_code),
-         Site_code = ifelse(Site == 50, "C50", Site_code)
-         ) |> 
-  select(Reservoir, Site, Site_code, Date, Depth_m, everything())
+sensors <- rbind(ctd_bind, ysi_bind) |> 
+  filter(Date > ymd("2024-05-20"),
+         Date < ymd("2025-04-17")) |>  # remove S1 measurement from before sampling
+  arrange(Date, Site, Depth_m)
+
+write.csv(sensors, "./Sensor_Data_compiled.csv", row.names = F)
 
 
-sensors <- left_join(sensors_nodistance, distances, by = c("Site_code", "Date")) |> 
-    mutate(Distance = Distance_ft*0.3048,
-         Dry_start = Dry_start*0.3048,
-         Dry_end = Dry_end*0.3048) |> 
-  filter(#Site != 50, #remove site 50 for EEMs comp
-         Date > ymd("2024-04-23"),
-         Date < ymd("2025-04-17")) # remove S1 measurement from before sampling
-
-sensors <- left_join(sensors, site_class, by = c("Site_code", "Date")) |> 
-  select(Reservoir, Site, Site_code, Site_Class, Date, Distance, Dry_start, Dry_end, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm )
+# sensors_nodistance <- rbind(ctd_bind, ysi_bind) |> 
+#   # mutate(Distance_ft = ifelse(Site == 101, 0, NA),
+#   #        Distance_ft = ifelse(Site == 100, 407, Distance_ft),
+#   #        Distance_ft = ifelse(Site == 98, 619, Distance_ft),
+#   #        Distance_ft = ifelse(Site == 96, 790, Distance_ft),
+#   #        Distance_ft = ifelse(Site == 94, 1015, Distance_ft),
+#   #        Distance_ft = ifelse(Site == 92, 1132, Distance_ft),
+#   #        Distance_ft = ifelse(Site == 90, 1843, Distance_ft),
+#   #        Distance_ft = ifelse(Site == 88, 3326, Distance_ft),
+#   #        Distance_ft = ifelse(Site == 50, 5011, Distance_ft)
+#   #        ) |> 
+#   mutate(Site_code = ifelse(Site == 101, "S1", NA),
+#          Site_code = ifelse(Site == 100, "S2", Site_code),
+#          Site_code = ifelse(Site == 98, "P1", Site_code),
+#          Site_code = ifelse(Site == 96, "P2", Site_code),
+#          Site_code = ifelse(Site == 94, "C1", Site_code),
+#          Site_code = ifelse(Site == 92, "C2", Site_code),
+#          Site_code = ifelse(Site == 90, "C3", Site_code),
+#          Site_code = ifelse(Site == 88, "C4", Site_code),
+#          Site_code = ifelse(Site == 50, "C50", Site_code)
+#          ) |> 
+#   select(Reservoir, Site, Site_code, Date, Depth_m, everything())
+# 
+# 
+# sensors <- left_join(sensors_nodistance, distances, by = c("Site_code", "Date")) |> 
+#     mutate(Distance = Distance_ft*0.3048,
+#          Dry_start = Dry_start*0.3048,
+#          Dry_end = Dry_end*0.3048) |> 
+#   filter(#Site != 50, #remove site 50 for EEMs comp
+#          Date > ymd("2024-04-23"),
+#          Date < ymd("2025-04-17")) # remove S1 measurement from before sampling
+# 
+# sensors <- left_join(sensors, site_class, by = c("Site_code", "Date")) |> 
+#   select(Reservoir, Site, Site_code, Site_Class, Date, Distance, Dry_start, Dry_end, Depth_m, Temp_C, DO_mgL, DOsat_percent, SpCond_uScm )
 
 
 ```
@@ -169,7 +178,7 @@ Helene differences on strat
 ```{r}
 ### Temp
 sensors |> 
-  filter(Site_code != "C1") |> 
+  #filter(Site_code != "C1") |> 
   # select(-DO_mgL) |> 
   # pivot_longer(-c(1:9)) |> 
   filter(#name == "Temp_C",
