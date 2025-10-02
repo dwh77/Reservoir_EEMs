@@ -98,7 +98,7 @@ doc <- edi_chem |>
          DateTime > ymd("2024-05-01")) |> 
   mutate(Date = as.Date(DateTime)) |> 
   filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
-  select(Site, Depth_m, Date, DOC_mgL, DN_mgL, NO3NO2_ugL, NH4_ugL, SRP_ugL) |>
+  dplyr::select(Site, Depth_m, Date, DOC_mgL, DN_mgL, NO3NO2_ugL, NH4_ugL, SRP_ugL) |>
   group_by(Site, Depth_m, Date) |>
   summarise(DOC_mean = mean(DOC_mgL, na.rm = T),
             DOC_min = min(DOC_mgL, na.rm = T),
@@ -184,7 +184,7 @@ shapiro.test(chem$d2H_VSMOW)
 
 #Faceting
 chem |> 
-  select(-c(FI_mean, a350_mean)) |> 
+  dplyr::select(-c(FI_mean, a350_mean)) |> 
   pivot_longer(-c(1:10)) |> 
   ggplot(aes(x = Distance, y = value, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
@@ -571,6 +571,194 @@ slope(my.seg)
 ```
 
 
+Breakpoint by date and variable
+
+```{r}
+## BIX connected dates
+bix_connected <- chem |> 
+  filter(Date %in% c( ymd("2024-05-22"), ymd("2024-09-30"), 
+                      ymd("2024-12-17"), ymd("2025-02-26"), ymd("2025-04-16"))
+                      )
+
+#fit normal linear regression 
+my.lm <- lm(BIX_mean ~ Distance, data = bix_connected)
+summary(my.lm)
+
+#Run breakpoint
+my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
+summary(my.seg)
+my.seg$psi
+slope(my.seg)
+
+#fit breakpoint segments to distance data
+my.fitted <- fitted(my.seg)
+my.model <- data.frame(Distance = bix_connected$Distance, BIX_fit = my.fitted)
+
+#get breakpoint lines
+my.lines <- my.seg$psi[ , 2]
+
+#plot
+bix_connected |> 
+  ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m))+
+  geom_point(shape = 21, size = 4) + #shape = 21,
+  # geom_smooth()+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)", y = "BIX", fill = "Depth (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  ggtitle("Connected days")+ ylim(0.45,0.9)+
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))+
+  #geom_smooth()+
+  geom_vline(xintercept = my.lines, linetype = "dashed", size = 1.5) +
+  geom_line(data = my.model, aes(x = Distance, y = BIX_fit), size = 1, inherit.aes = FALSE ) 
+
+
+
+## BIX disconnected
+bix_disconnected <- chem |> 
+  filter(!Date %in% c( ymd("2024-05-22"), ymd("2024-09-30"), 
+                      ymd("2024-12-17"), ymd("2025-02-26"), ymd("2025-04-16"))
+                      )
+
+#fit normal linear regression 
+my.lm <- lm(BIX_mean ~ Distance, data = bix_disconnected)
+summary(my.lm)
+
+#Run breakpoint
+my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
+summary(my.seg)
+my.seg$psi
+slope(my.seg)
+
+#fit breakpoint segments to distance data
+my.fitted <- fitted(my.seg)
+my.model <- data.frame(Distance = bix_disconnected$Distance, BIX_fit = my.fitted)
+
+#get breakpoint lines
+my.lines <- my.seg$psi[ , 2]
+
+#plot
+bix_disconnected |> 
+  ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m))+
+  geom_point(shape = 21, size = 4) + #shape = 21,
+  # geom_smooth()+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)", y = "BIX", fill = "Depth (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  ggtitle("discon")+ ylim(0.45,0.9)+
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))+
+  #geom_smooth()+
+  geom_vline(xintercept = my.lines, linetype = "dashed", size = 1.5) +
+  geom_line(data = my.model, aes(x = Distance, y = BIX_fit), size = 1, inherit.aes = FALSE ) 
+
+
+
+
+```
+
+
+Look at breakpoint across surface vs max depth
+
+```{r}
+
+##surface 
+surface_df <- chem |> 
+  filter(Depth_m == 0.1)
+  
+
+#fit normal linear regression 
+my.lm <- lm(BIX_mean ~ Distance, data = surface_df)
+summary(my.lm)
+
+#Run breakpoint
+my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
+summary(my.seg)
+my.seg$psi
+slope(my.seg)
+
+#fit breakpoint segments to distance data
+my.fitted <- fitted(my.seg)
+my.model <- data.frame(Distance = surface_df$Distance, BIX_fit = my.fitted)
+
+#get breakpoint lines
+my.lines <- my.seg$psi[ , 2]
+
+#plot
+surface_df |> 
+  ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m))+
+  geom_point(shape = 21, size = 4) + #shape = 21,
+  # geom_smooth()+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)", y = "BIX", fill = "Depth (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  ggtitle("0.1m")+ ylim(0.45,0.9)+
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))+
+  #geom_smooth()+
+  geom_vline(xintercept = my.lines, linetype = "dashed", size = 1.5) +
+  geom_line(data = my.model, aes(x = Distance, y = BIX_fit), size = 1, inherit.aes = FALSE ) 
+
+
+
+
+
+
+
+
+### Max depth
+max_depth_df <- chem |> 
+  group_by(Site, Date) |> 
+  mutate(max_depth = if_else(Depth_m == max(Depth_m, na.rm = TRUE), "Max", "Not")) |> 
+  ungroup() |> 
+  filter(max_depth == "Max")
+  
+
+#fit normal linear regression 
+my.lm <- lm(BIX_mean ~ Distance, data = max_depth_df)
+summary(my.lm)
+
+#Run breakpoint
+my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
+summary(my.seg)
+my.seg$psi
+slope(my.seg)
+
+#fit breakpoint segments to distance data
+my.fitted <- fitted(my.seg)
+my.model <- data.frame(Distance = max_depth_df$Distance, BIX_fit = my.fitted)
+
+#get breakpoint lines
+my.lines <- my.seg$psi[ , 2]
+
+#plot
+max_depth_df |> 
+  ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m))+
+  geom_point(shape = 21, size = 4) + #shape = 21,
+  # geom_smooth()+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)", y = "BIX", fill = "Depth (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  ggtitle("Max Depth")+ ylim(0.45,0.9)+
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))+
+  #geom_smooth()+
+  geom_vline(xintercept = my.lines, linetype = "dashed", size = 1.5) +
+  geom_line(data = my.model, aes(x = Distance, y = BIX_fit), size = 1, inherit.aes = FALSE ) 
+
+
+
+
+
+```
 
 
 
@@ -592,6 +780,64 @@ doc_breakpoint | hix_breakpoint
 
 ```
 
+
+
+## Space by date figure
+
+```{r}
+
+#levels <- c("DOC_mean", "DON_mean", "BIX_mean", "HIX_mean", "AT_mean", "NO3_mean", "NH4_mean", "PO4_mean","D_excess")
+#levels <- c("DOC_mean", "BIX_mean", "HIX_mean", "NO3_mean", "NH4_mean", "PO4_mean","D_excess")
+levels <- c("DOC_mean", "BIX_mean", "HIX_mean", "NO3_mean", "D_excess")
+
+
+chem |> 
+  pivot_longer(-c(1:10)) |> 
+  # filter(!name %in% c("A_mean", "T_mean", "FI_mean", "a350_mean")) |> 
+  filter(name %in% levels) |> 
+  ggplot(aes(x = Distance, y = value, fill = Depth_m))+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
+  geom_point(shape = 21, size = 4) + #shape = 21,
+  #geom_smooth()+ # add ', warning=FALSE' to chunk to see plot
+  facet_grid(factor(name, levels = levels)~Date, scales = "free_y")+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)", fill = "Depth (m)")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))
+
+
+```
+
+
+Isotope boundary mixing 
+
+```{r}
+
+levels <- c("DOC_mean", "BIX_mean", "HIX_mean", "d18O_VSMOW", "d2H_VSMOW", "D_excess")
+
+chem |> 
+  filter(!Site %in% c(50,88,90)) |> 
+  pivot_longer(-c(1:10)) |> 
+  filter(name %in% levels) |> 
+  ggplot(aes(x = Distance, y = value, fill = Depth_m))+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
+  facet_grid(name~Date, scales = "free_y")+
+  geom_point(size = 3, shape = 21)+ #need shape here if not doing site type
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 150, 300))+ #c(250, 750)
+  #scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 0.7,  guide = "colourbar", breaks = c(0,1,2,3))
+
+
+```
 
 
 
@@ -635,19 +881,18 @@ sensors |>
   pivot_longer(-c(1:9)) |> 
   # filter(name == "Temp_C") |> 
   ggplot(aes(x = Distance, y = value, fill = Depth_m,
-             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
+             #shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))
+             ))+
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
             alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
   facet_grid(name~Date, scales = "free_y")+
-  geom_point(size = 3)+
+  geom_point(size = 3, shape = 21)+ #need shape here if not doing site type
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   labs(x= "Distance from Stream (m)",
        shape = "Site Type")+
   scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ #c(250, 750)
-  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
-  # scale_color_gradient(high = "red", low = "blue") +
-  # scale_fill_gradient(high = "red", low = "blue") 
+  #scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
   scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15, 20))
 
@@ -665,17 +910,18 @@ sensors |>
   pivot_longer(-c(1:9)) |> 
   # filter(name == "Temp_C") |> 
   ggplot(aes(x = Distance, y = value, fill = Depth_m,
-             shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))))+
+             #shape = factor(Site_Class, levels = c("Stream", "Pool", "Cove", "Pelagic"))
+             ))+
   geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
             alpha = 0.1, fill = "gray", color = NA )+ #color gets rid of border
   facet_grid(name~Date, scales = "free_y")+
-  geom_point(size = 3)+
+  geom_point(size = 3, shape = 21)+ #need shape here if not doing site type
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   labs(x= "Distance from Stream (m)",
        shape = "Site Type")+
   scale_x_continuous(breaks = c(0, 150, 300))+ #c(250, 750)
-  scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
+  #scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
   scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 0.7,  guide = "colourbar", breaks = c(0,1,2,3))
 
