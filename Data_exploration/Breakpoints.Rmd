@@ -904,6 +904,7 @@ zoom in on shallow sites
 
 ```{r}
 
+#value on y
 sensors |> 
   filter(!Site %in% c(50,88,90)) |> 
   select(-DO_mgL) |> 
@@ -924,6 +925,61 @@ sensors |>
   #scale_shape_manual(values = c(24, 22, 21, 25))+ #18, 15, 16, 17
   scale_fill_gradient2(low = "red",  high ="blue",
                        midpoint = 0.7,  guide = "colourbar", breaks = c(0,1,2,3))
+
+
+#depth on y
+plunge_spcond_fig <- sensors |> 
+  filter(!Site %in% c(50,88,90)) |> 
+    mutate(Dry_start = ifelse(Depth_m == 0.1 & Site_code == "S1", Dry_start, NA),
+         Dry_end = ifelse(Depth_m == 0.1 & Site_code == "S1", Dry_end, NA)) |> #so just one row has info for dry start and end, was having issues where laying multiple rectangles for more observations affected shading color
+  select(-DO_mgL) |> 
+  pivot_longer(-c(1:9)) |> 
+  filter(name == "SpCond_uScm") |> 
+  ggplot(aes(x = Distance, y = Depth_m, fill = value))+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.5, fill = "gray", color = NA )+ #color gets rid of border
+  facet_grid(name~Date, scales = "free_y")+
+  geom_point(size = 3, shape = 21)+ #need shape here if not doing site type
+  scale_y_reverse()+
+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 150, 300)) +
+  #scale_fill_gradient(low = "blue",  high ="red")
+ scale_fill_gradient2(low = "blue",  high ="red",
+                       midpoint = 75,  guide = "colourbar")
+
+plunge_spcond_fig
+
+
+plunge_temp_fig <- sensors |> 
+  filter(!Site %in% c(50,88,90)) |> 
+  mutate(Dry_start = ifelse(Depth_m == 0.1 & Site_code == "S1", Dry_start, NA),
+         Dry_end = ifelse(Depth_m == 0.1 & Site_code == "S1", Dry_end, NA)) |> #so just one row has info for dry start and end, was having issues where laying multiple rectangles for more observations affected shading color
+  select(-DO_mgL) |> 
+  pivot_longer(-c(1:9)) |> 
+  filter(name == "Temp_C") |> 
+  ggplot(aes(x = Distance, y = Depth_m, fill = value))+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.5, fill = "gray", color = NA )+ #color gets rid of border
+  facet_grid(name~Date, scales = "free_y")+
+  geom_point(size = 3, shape = 21)+ #need shape here if not doing site type
+  scale_y_reverse()+
+  theme_bw()+ theme(legend.position = "right", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 150, 300)) +
+  #scale_fill_gradient(low = "red",  high ="blue")
+ scale_fill_gradient2(low = "blue",  high ="red",
+                       midpoint = 15,  guide = "colourbar")
+
+plunge_temp_fig
+
+
+library(patchwork)
+plunge_spcond_fig / plunge_temp_fig
 
 
 ```
