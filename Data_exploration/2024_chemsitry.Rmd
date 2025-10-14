@@ -385,9 +385,13 @@ fridge test
 
 eemsfridge <- read.csv("../Processed_Data/Fridge_test_data.csv")
 
+fridge_levels <- c("Fridge_1day", "Fridge_5day", "Freeze_1day", "Freeze_7day", "Freeze_6month")
+
 eemsfridge |> 
-  ggplot(aes(x = test_code, y = FI., color = as.factor(Depth_m), shape = as.factor(Site_number)))+
-  geom_point()
+  ggplot(aes(x = factor(test_code, levels = fridge_levels), 
+             y = A., color = as.factor(Depth_m), shape = as.factor(Site_number)))+
+  geom_point()+
+  labs(x= "Storage")
 
 ```
 
