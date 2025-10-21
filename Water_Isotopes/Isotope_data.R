@@ -37,14 +37,14 @@ library(viridis)
 
 
 #### Look at data -------------
-distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances (2).csv") |> 
+distances <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Distances.csv") |> 
   mutate(Date = mdy(Date)) |> 
   dplyr::select(-c(13,14)) |> 
   pivot_longer(-c(1,11,12), names_to = "Site_code", values_to = "Distance_ft") |> 
   filter(!Site_code == "C1") 
 
 
-site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class (2).csv") |> 
+site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_Class.csv") |> 
   dplyr::select(-X, -Key) |> 
   mutate(Date = mdy(Date)) |> 
   pivot_longer(-c(1), names_to = "Site_code", values_to = "Site_Class") |> 
@@ -224,6 +224,7 @@ iso_plotting |>
   mutate(Site_CODE = paste(Site_code_new, Depth_new, sep = "_")) |> 
  #make plot
   filter(Depth_new %in% c("0.1", "BOT")) |> 
+  # filter(Site %in% c(101,100,98,96)) |> 
   mutate(TOP_BOT = ifelse(Depth_new %in% c("0.1"), "TOP", "BOT")) |> 
   ggplot(aes(x =Date, y = D_excess, 
              #color = factor(Site_CODE, levels = iso_levels),
@@ -231,9 +232,9 @@ iso_plotting |>
              linetype = factor(TOP_BOT, levels = c("TOP", "BOT"))
              ))+
   geom_point(size = 3) +  geom_line(size = 1.3)+
-  labs(x = "Date", y = "D excess", color = "Site_Depth", linetype = "Depth")+
+  labs(x = "Date", y = "Deuterium excess", color = "Site_Depth", linetype = "Depth")+
   annotate("text", x = ymd("2024-06-01"), y = 18,
-           label = "d excess = dD - 8*d18O", size = 5, color = "black", hjust = 0)+
+           label = "D excess = dD - 8*d18O", size = 5, color = "black", hjust = 0)+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   guides(color = guide_legend(nrow = 2, byrow = TRUE))+ # Arrange legend in 2 rows, filling by row
