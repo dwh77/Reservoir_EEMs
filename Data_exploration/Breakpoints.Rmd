@@ -75,20 +75,19 @@ eems <- eems24 |>
          AT = A.T.) |>  #### can just change the rename here for what value you want to look at
   dplyr::select(Site, Depth_m, Date, HIX, BIX, FI, A, peakT, AT, a254, a350) |> 
   group_by(Site, Depth_m, Date) |> 
-  summarise(HIX_mean = mean(HIX, na.rm = T),
+  summarise(HIX = mean(HIX, na.rm = T),
             HIX_min = min(HIX, na.rm = T),
             HIX_max = max(HIX, na.rm = T),
-            BIX_mean = mean(BIX, na.rm = T),
+            BIX = mean(BIX, na.rm = T),
             BIX_min = min(BIX, na.rm = T),
             BIX_max = max(BIX, na.rm = T),
-            FI_mean = mean(FI, na.rm = T),
-            A_mean = mean(A, na.rm = T),
-            T_mean = mean(peakT, na.rm = T),
-            AT_mean = mean(AT, na.rm = T),
-            a254_mean = mean(a254, na.rm = T),
-            a350_mean = mean(a350, na.rm = T)
+            FI = mean(FI, na.rm = T),
+            A = mean(A, na.rm = T),
+            AT = mean(AT, na.rm = T),
+            a254 = mean(a254, na.rm = T),
+            a350 = mean(a350, na.rm = T)
             ) |> 
-  mutate(Rep = ifelse(HIX_mean != HIX_min, "Y", "N"))
+  mutate(Rep = ifelse(HIX != HIX_min, "Y", "N"))
 
 #### chem 
 edi_chem <- read.csv("https://pasta.lternet.edu/package/data/eml/edi/199/13/3f09a3d23b7b5dd32ed7d28e9bc1b081" )
@@ -100,23 +99,23 @@ doc <- edi_chem |>
   filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
   dplyr::select(Site, Depth_m, Date, DOC_mgL, DN_mgL, NO3NO2_ugL, NH4_ugL, SRP_ugL) |>
   group_by(Site, Depth_m, Date) |>
-  summarise(DOC_mean = mean(DOC_mgL, na.rm = T),
+  summarise(DOC_mgL = mean(DOC_mgL, na.rm = T),
             DOC_min = min(DOC_mgL, na.rm = T),
             DOC_max = max(DOC_mgL, na.rm = T),
-            DN_mean = mean(DN_mgL, na.rm = T),
+            DN_mgL = mean(DN_mgL, na.rm = T),
             DN_min = min(DN_mgL, na.rm = T),
             DN_max = max(DN_mgL, na.rm = T),
-            PO4_mean = mean(SRP_ugL, na.rm = T),
+            PO4_ugL = mean(SRP_ugL, na.rm = T),
             PO4_min = min(SRP_ugL, na.rm = T),
             PO4_max = max(SRP_ugL, na.rm = T),
-            NH4_mean = mean(NH4_ugL, na.rm = T),
+            NH4_ugL = mean(NH4_ugL, na.rm = T),
             NH4_min = min(NH4_ugL, na.rm = T),
             NH4_max = max(NH4_ugL, na.rm = T),
-            NO3_mean = mean(NO3NO2_ugL, na.rm = T),
+            NO3_ugL = mean(NO3NO2_ugL, na.rm = T),
             NO3_min = min(NO3NO2_ugL, na.rm = T),
             NO3_max = max(NO3NO2_ugL, na.rm = T)
                         ) |>
-  mutate(Rep = ifelse(DOC_mean != DOC_min, "Y", "N")) |> 
+  mutate(Rep = ifelse(DOC_mgL != DOC_min, "Y", "N")) |> 
   mutate(Site = as.numeric(Site))
 
 
@@ -145,13 +144,13 @@ chem <- left_join(doc, eems, by = c("Date", "Depth_m", "Site")) |>
          Site_Type_static = ifelse(Site %in% c(100,101), "Stream", Site_Type_static)
   ) |> 
   filter(!Date %in% c(ymd("2024-07-31"), ymd("2024-08-01"))) |> 
-  mutate(DON_mean = DN_mean - ((NO3_mean + NH4_mean)/1000)) |> 
-  mutate(SUVA254 = a254_mean / DOC_mean) |> 
+  mutate(DON_mgL = DN_mgL - ((NO3_ugL + NH4_ugL)/1000)) |> 
+  mutate(SUVA254 = a254 / DOC_mgL) |> 
   mutate(D_excess = d2H_VSMOW - 8*d18O_VSMOW) |> 
   dplyr::select(Reservoir, Site, Site_code, Site_Class, Site_Type_static, 
                 Depth_m, Date, Distance, Dry_start, Dry_end, 
-                FI_mean, HIX_mean, BIX_mean, T_mean, A_mean, AT_mean, a254_mean, a350_mean, SUVA254,
-                DOC_mean, DN_mean, DON_mean, PO4_mean, NO3_mean, NH4_mean,
+                FI, HIX, BIX, A, AT, a254, a350, SUVA254,
+                DOC_mgL, DN_mgL, DON_mgL, PO4_ugL, NO3_ugL, NH4_ugL,
                 d18O_VSMOW, d2H_VSMOW, D_excess)
 
 
@@ -168,10 +167,10 @@ rm(distances, edi_chem, doc, eems,eems24, iso24)
 #### normality
   ##https://www.sthda.com/english/wiki/normality-test-in-r
 
-ggdensity(chem$BIX_mean, xlab = "BIX", main = "Density plot of BIX in CCR")
-shapiro.test(chem$BIX_mean) # p-values < 0.05 means data is not normally distributed
-ggdensity(chem$DOC_mean, xlab = "DOC (mg/L)", main = "Density plot of DOC in CCR")
-shapiro.test(chem$DOC_mean) 
+ggdensity(chem$BIX, xlab = "BIX", main = "Density plot of BIX in CCR")
+shapiro.test(chem$BIX) # p-values < 0.05 means data is not normally distributed
+ggdensity(chem$DOC_mgL, xlab = "DOC (mg/L)", main = "Density plot of DOC in CCR")
+shapiro.test(chem$DOC_mgL) 
 ggdensity(chem$d2H_VSMOW, xlab = "dH2", main = "Density plot of dH2 in CCR")
 shapiro.test(chem$d2H_VSMOW) 
 
@@ -184,7 +183,7 @@ shapiro.test(chem$d2H_VSMOW)
 
 #Faceting
 chem |> 
-  dplyr::select(-c(FI_mean, a350_mean)) |> 
+  dplyr::select(-c(FI, a350)) |> 
   pivot_longer(-c(1:10)) |> 
   ggplot(aes(x = Distance, y = value, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
@@ -202,7 +201,7 @@ chem |>
 #### just one variable
 #BIX  # bix_clean <- 
 chem |> 
-  ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m))+
+  ggplot(aes(x = Distance, y = BIX, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
   # geom_smooth()+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
@@ -288,9 +287,9 @@ make_kruskal_dunn_plot <- function(df, response_var, group_var = "Site_Type_stat
 
 #### Run function 
 response_vars <- c(
-                   "BIX_mean", "HIX_mean", "AT_mean", "SUVA254", 
-                   "DOC_mean", "DN_mean", "DON_mean",
-                   "NH4_mean", "NO3_mean", "PO4_mean",
+                   "BIX", "HIX", "AT", "SUVA254", 
+                   "DOC_mgL", "DN_mgL", "DON_mgL",
+                   "NH4_ugL", "NO3_ugL", "PO4_ugL",
                    "d18O_VSMOW", "d2H_VSMOW", "D_excess"
                    )  
 
@@ -311,9 +310,9 @@ plots$BIX_mean
 
 #make a few plots in groups 
 library(gridExtra)
-gridExtra::grid.arrange(plots$BIX_mean, plots$HIX_mean, plots$AT_mean, plots$SUVA254, nrow = 1) #EEM
-gridExtra::grid.arrange(plots$DOC_mean, plots$DON_mean, nrow = 1) #DOM
-gridExtra::grid.arrange(plots$NO3_mean, plots$NH4_mean, plots$DN_mean, plots$PO4_mean, nrow = 1) #Nutrients
+gridExtra::grid.arrange(plots$BIX, plots$HIX, plots$AT, plots$SUVA254, nrow = 1) #EEM
+gridExtra::grid.arrange(plots$DOC_mgL, plots$DON_mgL, nrow = 1) #DOM
+gridExtra::grid.arrange(plots$NO3_ugL, plots$NH4_ugL, plots$DN_mgL, plots$PO4_ugL, nrow = 1) #Nutrients
 gridExtra::grid.arrange(plots$d18O_VSMOW, plots$d2H_VSMOW, plots$D_excess, nrow = 1) #Isotopes
 
 
@@ -403,9 +402,9 @@ plot_segmented_breakpoint <- function(df, response_var, predictor_var = "Distanc
 
 # List of response variables to analyze
 response_vars <- c(
-                   "BIX_mean", "HIX_mean", "AT_mean", "SUVA254", 
-                   "DOC_mean", "DN_mean", "DON_mean",
-                   "NH4_mean", "NO3_mean", "PO4_mean",
+                   "BIX", "HIX", "AT", "SUVA254", 
+                   "DOC_mgL", "DN_mgL", "DON_mgL",
+                   "NH4_ugL", "NO3_ugL", "PO4_ugL",
                    "d18O_VSMOW", "d2H_VSMOW", "D_excess"
                    )  
 
@@ -426,18 +425,22 @@ wrap_plots(segmented_plots, ncol = 3)
 #make a few plots in groups 
 library(gridExtra)
 #EEMs
-gridExtra::grid.arrange(segmented_plots$BIX_mean, segmented_plots$HIX_mean, 
-                        segmented_plots$AT_mean, segmented_plots$SUVA254, nrow = 1) #EEM
+gridExtra::grid.arrange(segmented_plots$BIX, segmented_plots$HIX, 
+                        segmented_plots$AT, segmented_plots$SUVA254, nrow = 1) #EEM
 #DOM
-gridExtra::grid.arrange(segmented_plots$DOC_mean, segmented_plots$DON_mean, nrow = 1) #DOM
+gridExtra::grid.arrange(segmented_plots$DOC_mgL, segmented_plots$DON_mgL, nrow = 1) #DOM
 #Nuts
-gridExtra::grid.arrange(segmented_plots$NO3_mean, segmented_plots$NH4_mean, 
-                        segmented_plots$DN_mean, segmented_plots$PO4_mean, nrow = 1) #Nutrients
+gridExtra::grid.arrange(segmented_plots$NO3_ugL, segmented_plots$NH4_ugL, 
+                        segmented_plots$DN_mgL, segmented_plots$PO4_ugL, nrow = 1) #Nutrients
 #Iso
 gridExtra::grid.arrange(segmented_plots$d18O_VSMOW, segmented_plots$d2H_VSMOW, 
                         segmented_plots$D_excess, nrow = 1) #Isotopes
 
 
+#for comm meeting
+
+gridExtra::grid.arrange(segmented_plots$DOC_mgL,
+                        segmented_plots$BIX, nrow = 2) 
 
 
 ```
@@ -447,26 +450,26 @@ Stack breakpoints and boxplots
 ```{r}
 
 #### Main variables for MS figure
-gridExtra::grid.arrange(segmented_plots$BIX_mean, segmented_plots$DOC_mean, 
-                        segmented_plots$D_excess, segmented_plots$NO3_mean,
-                        plots$BIX_mean, plots$DOC_mean, plots$D_excess, plots$NO3_mean, nrow = 2)
+gridExtra::grid.arrange(segmented_plots$BIX, segmented_plots$DOC_mgL, 
+                        segmented_plots$D_excess, segmented_plots$NO3_ugL,
+                        plots$BIX, plots$DOC_mgL, plots$D_excess, plots$NO3_ugL, nrow = 2)
 
 
 
 #### EEMs
-gridExtra::grid.arrange(segmented_plots$BIX_mean, segmented_plots$HIX_mean, 
-                        segmented_plots$AT_mean, segmented_plots$SUVA254,
-                        plots$BIX_mean, plots$HIX_mean, plots$AT_mean, plots$SUVA254, nrow = 2)
+gridExtra::grid.arrange(segmented_plots$BIX, segmented_plots$HIX, 
+                        segmented_plots$AT, segmented_plots$SUVA254,
+                        plots$BIX, plots$HIX, plots$AT, plots$SUVA254, nrow = 2)
 
 #### DOM
-gridExtra::grid.arrange(segmented_plots$DOC_mean, segmented_plots$DON_mean,
-                        plots$DOC_mean, plots$DON_mean, nrow = 2) #DOM
+gridExtra::grid.arrange(segmented_plots$DOC_mgL, segmented_plots$DON_mgL,
+                        plots$DOC_mgL, plots$DON_mgL, nrow = 2) #DOM
 
 
 #### Nutrients
-gridExtra::grid.arrange(segmented_plots$NO3_mean, segmented_plots$NH4_mean, 
-                        segmented_plots$DN_mean, segmented_plots$PO4_mean,
-                        plots$NO3_mean, plots$NH4_mean, plots$DN_mean, plots$PO4_mean, nrow = 2) #Nutrients
+gridExtra::grid.arrange(segmented_plots$NO3_ugL, segmented_plots$NH4_ugL, 
+                        segmented_plots$DN_mgL, segmented_plots$PO4_ugL,
+                        plots$NO3_ugL, plots$NH4_ugL, plots$DN_mgL, plots$PO4_ugL, nrow = 2) #Nutrients
 
 
 #### Isotopes
@@ -486,7 +489,7 @@ singular breakpoint
 ### BIX
 
 #fit normal linear regression 
-my.lm <- lm(BIX_mean ~ Distance, data = chem)
+my.lm <- lm(BIX ~ Distance, data = chem)
 summary(my.lm)
 
 #Run breakpoint
@@ -504,7 +507,7 @@ my.lines <- my.seg$psi[ , 2]
 
 #plot
 chem |> 
-  ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m))+
+  ggplot(aes(x = Distance, y = BIX, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
   # geom_smooth()+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
@@ -527,7 +530,7 @@ Breakpoint stats for each
 
 ```{r}
 #BIX
-my.lm <- lm(BIX_mean ~ Distance, data = chem)
+my.lm <- lm(BIX ~ Distance, data = chem)
 my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
 summary(my.seg)
 my.seg$psi
@@ -535,14 +538,14 @@ slope(my.seg)
 
 
 #HIX
-my.lm <- lm(HIX_mean ~ Distance, data = chem)
+my.lm <- lm(HIX ~ Distance, data = chem)
 my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
 summary(my.seg)
 my.seg$psi
 slope(my.seg)
 
 #DOC
-my.lm <- lm(DOC_mean ~ Distance, data = chem)
+my.lm <- lm(DOC_mgL ~ Distance, data = chem)
 my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
 summary(my.seg)
 my.seg$psi
@@ -550,15 +553,7 @@ slope(my.seg)
 
 
 #DON
-my.lm <- lm(DON_mean ~ Distance, data = chem)
-my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
-summary(my.seg)
-my.seg$psi
-slope(my.seg)
-
-
-#DN
-my.lm <- lm(DN_mean ~ Distance, data = chem)
+my.lm <- lm(DON_mgL ~ Distance, data = chem)
 my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )
 summary(my.seg)
 my.seg$psi
@@ -571,6 +566,7 @@ slope(my.seg)
 ```
 
 
+
 Breakpoint by date and variable
 
 ```{r}
@@ -581,7 +577,7 @@ bix_connected <- chem |>
                       )
 
 #fit normal linear regression 
-my.lm <- lm(BIX_mean ~ Distance, data = bix_connected)
+my.lm <- lm(BIX ~ Distance, data = bix_connected)
 summary(my.lm)
 
 #Run breakpoint
@@ -599,7 +595,7 @@ my.lines <- my.seg$psi[ , 2]
 
 #plot
 bix_connected |> 
-  ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m))+
+  ggplot(aes(x = Distance, y = BIX, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
   # geom_smooth()+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
@@ -623,7 +619,7 @@ bix_disconnected <- chem |>
                       )
 
 #fit normal linear regression 
-my.lm <- lm(BIX_mean ~ Distance, data = bix_disconnected)
+my.lm <- lm(BIX ~ Distance, data = bix_disconnected)
 summary(my.lm)
 
 #Run breakpoint
@@ -641,7 +637,7 @@ my.lines <- my.seg$psi[ , 2]
 
 #plot
 bix_disconnected |> 
-  ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m))+
+  ggplot(aes(x = Distance, y = BIX, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
   # geom_smooth()+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
@@ -672,7 +668,7 @@ surface_df <- chem |>
   
 
 #fit normal linear regression 
-my.lm <- lm(BIX_mean ~ Distance, data = surface_df)
+my.lm <- lm(BIX ~ Distance, data = surface_df)
 summary(my.lm)
 
 #Run breakpoint
@@ -690,7 +686,7 @@ my.lines <- my.seg$psi[ , 2]
 
 #plot
 surface_df |> 
-  ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m))+
+  ggplot(aes(x = Distance, y = BIX, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
   # geom_smooth()+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
@@ -721,7 +717,7 @@ max_depth_df <- chem |>
   
 
 #fit normal linear regression 
-my.lm <- lm(BIX_mean ~ Distance, data = max_depth_df)
+my.lm <- lm(BIX ~ Distance, data = max_depth_df)
 summary(my.lm)
 
 #Run breakpoint
@@ -739,7 +735,7 @@ my.lines <- my.seg$psi[ , 2]
 
 #plot
 max_depth_df |> 
-  ggplot(aes(x = Distance, y = BIX_mean, fill = Depth_m))+
+  ggplot(aes(x = Distance, y = BIX, fill = Depth_m))+
   geom_point(shape = 21, size = 4) + #shape = 21,
   # geom_smooth()+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
@@ -788,7 +784,7 @@ doc_breakpoint | hix_breakpoint
 
 #levels <- c("DOC_mean", "DON_mean", "BIX_mean", "HIX_mean", "AT_mean", "NO3_mean", "NH4_mean", "PO4_mean","D_excess")
 #levels <- c("DOC_mean", "BIX_mean", "HIX_mean", "NO3_mean", "NH4_mean", "PO4_mean","D_excess")
-levels <- c("DOC_mean", "BIX_mean", "HIX_mean", "NO3_mean", "D_excess")
+levels <- c("DOC_mgL", "BIX", "HIX", "NO3_ugL", "D_excess")
 
 
 chem |> 
@@ -816,7 +812,7 @@ Isotope boundary mixing
 
 ```{r}
 
-levels <- c("DOC_mean", "BIX_mean", "HIX_mean", "d18O_VSMOW", "d2H_VSMOW", "D_excess")
+levels <- c("DOC_mgL", "BIX", "HIX", "d18O_VSMOW", "d2H_VSMOW", "D_excess")
 
 chem |> 
   filter(!Site %in% c(50,88,90)) |> 
@@ -980,6 +976,33 @@ plunge_temp_fig
 
 library(patchwork)
 plunge_spcond_fig / plunge_temp_fig
+
+
+### Cond for comm meeting
+levels_db <- c("22 May", "19 Jun", "11 Jul", "14 Aug", "16 Sep", 
+               "30 Sep", "28 Oct", "17 Dec", "26 Feb", "16 Apr")
+
+sensors |> 
+  filter(!Site %in% c(50,88,90)) |> 
+    mutate(Dry_start = ifelse(Depth_m == 0.1 & Site_code == "S1", Dry_start, NA),
+         Dry_end = ifelse(Depth_m == 0.1 & Site_code == "S1", Dry_end, NA)) |> #so just one row has info for dry start and end, was having issues where laying multiple rectangles for more observations affected shading color
+  select(-DO_mgL) |> 
+  mutate(Date1 = format(Date, "%d %b")) |> 
+  ggplot(aes(x = Distance, y = Depth_m, fill = SpCond_uScm))+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 0.5, fill = "gray", color = NA )+ #color gets rid of border
+  facet_wrap(~factor(Date1, levels = levels_db), scales = "fixed", nrow = 1)+
+  geom_point(size = 3, shape = 21)+ #need shape here if not doing site type
+  scale_y_reverse()+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    legend.text = element_text(size = 12),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",
+       y = "Depth (m)", fill = "Sp. Cond (uS/cm)")+
+  scale_x_continuous(breaks = c(0, 150, 300)) +
+  #scale_fill_gradient(low = "blue",  high ="red")
+ scale_fill_gradient2(low = "blue",  high ="red",
+                       midpoint = 75,  guide = "colourbar")
 
 
 ```
