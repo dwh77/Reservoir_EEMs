@@ -4,10 +4,6 @@ output: html_document
 date: "2025-07-21"
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 Packages
 ```{r}
 library(ggpubr) # for ggdensity
@@ -45,7 +41,7 @@ site_class <- read.csv("C:/Users/dwh18/Downloads/2024 spatial sampling - Sites_C
 ```
 
 
-read in data sets
+read in chemistry data sets
 
 ```{r}
 #### Isotopes ###
@@ -1254,7 +1250,84 @@ chem |>
 ```
 
 
+## AGU plots 
 
+Hydrology 
+
+```{r}
+#read in data
+hydro_data <- read.csv("./Hydro_dailyData.csv") |> 
+  mutate(Date = ymd(Date)) |> 
+  #clunky filter to fix period with messed up presure transducer
+  mutate(CCR_Dam_depth_m = ifelse(Date >= ymd("2025-03-13") & Date <= ymd("2025-04-03"), CCR_Dam_depth_m + 0.4, CCR_Dam_depth_m)) |> 
+  filter(CCR_Dam_depth_m < 20)
+
+
+##plot daily dam water level
+agu_hydro <- hydro_data |> 
+  filter(Date > ymd("2024-04-15")) |> 
+  filter(Date < ymd("2025-05-01")) |> 
+  ggplot(aes(x = Date, y = CCR_Dam_depth_m))+  geom_point(size = 3)+
+  geom_vline(xintercept = ymd("2024-05-22"), linetype = 2, linewidth = 1)+   
+  geom_vline(xintercept = ymd("2024-06-19"), linetype = 2, linewidth = 1)+
+  geom_vline(xintercept = ymd("2024-07-11"), linetype = 2, linewidth = 1)+    
+  geom_vline(xintercept = ymd("2024-08-14"), linetype = 2, linewidth = 1)+ 
+  geom_vline(xintercept = ymd("2024-09-16"), linetype = 2, linewidth = 1)+    
+  geom_vline(xintercept = ymd("2024-09-30"), linetype = 2, linewidth = 1)+ 
+  geom_vline(xintercept = ymd("2024-10-28"), linetype = 2, linewidth = 1)+   
+  geom_vline(xintercept = ymd("2024-12-17"), linetype = 2, linewidth = 1)+  
+  geom_vline(xintercept = ymd("2025-02-26"), linetype = 2, linewidth = 1)+  
+  geom_vline(xintercept = ymd("2025-04-16"), linetype = 2, linewidth = 1)+  
+  scale_x_date(breaks = "2 months", date_labels = "%b %y")+
+  labs(x= element_blank(), y = "Reservoir Water Level (m)")+  
+  theme_bw()+ theme(text = element_text(size = 24), # axis.text.x = element_text(angle = 10, hjust = 1),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# plotly::ggplotly(agu_hydro)
+agu_hydro
+
+ggsave("AGU25_figs/Dam_WL.png", agu_hydro, width = 9.5, height = 5.5, units = "in")
+
+```
+
+
+DOC and BIX like IGC
+
+```{r}
+#BIX
+igc_bix <- chem |> 
+  ggplot(aes(x = Distance, y = BIX, fill = Depth_m))+
+  geom_point(shape = 21, size = 4) + #shape = 21,
+  geom_smooth()+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    labs(x= "Distance from Stream (m)", y = "Biological Index (BIX)", fill = "Depth (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))
+
+#DOC
+igc_doc <- chem |> 
+  ggplot(aes(x = Distance, y = DOC_mgL, fill = Depth_m))+
+  geom_point(shape = 21, size = 4) + #shape = 21,
+  geom_smooth()+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    labs(x= "Distance from Stream (m)", y = "DOC (mg/L)", fill = "Depth (m)",
+       shape = "Site Type")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))
+
+igc_doc_bix <- ggpubr::ggarrange(igc_doc, igc_bix, nrow = 1, labels = "auto", font.label = list(size = 28))
+
+
+# ggsave("AGU25_figs/DOC_BIX_geomsmooth_color.png", igc_doc_bix, width = 12, height = 4.5, units = "in")
+
+
+
+```
 
 
 
