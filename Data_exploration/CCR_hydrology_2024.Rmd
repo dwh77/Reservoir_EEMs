@@ -418,6 +418,13 @@ left_join(CCR_usgs_data, hpb_tinker_interp, by = "Date") |>
 
 
 
+##export daily data frame for plotting w/ breakpoint script
+hydro_data <- left_join(CCR_usgs_data, hpb_tinker_interp, by = "Date") |> 
+  mutate(interp = ifelse(is.na(CCR_HPB_daily_waterlevel_cm), "Interp", "Observed")) |> 
+  mutate(HPB = ifelse(is.na(CCR_HPB_daily_waterlevel_cm), predicted_hpb_T, CCR_HPB_daily_waterlevel_cm ))
+
+#write.csv(hydro_data, "./Hydro_dailyData.csv", row.names = F)
+
 ```
 
 
