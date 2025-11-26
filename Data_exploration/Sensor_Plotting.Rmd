@@ -199,6 +199,37 @@ sensors |>
 
 #ggsave("MS_draft_figures/SpCond_S1-C1.png", width = 9.5, height = 5.5, units = "in")
 
+
+##sensors for AGU
+
+levels_agu <- c("22 May",  "16 Sep", 
+               "30 Sep", "26 Feb", "16 Apr")
+
+sensors |> 
+  filter(!Site %in% c(50,88,90)) |> 
+    mutate(Dry_start = ifelse(Depth_m == 0.1 & Site_code == "S1", Dry_start, NA),
+         Dry_end = ifelse(Depth_m == 0.1 & Site_code == "S1", Dry_end, NA)) |> #so just one row has info for dry start and end, was having issues where laying multiple rectangles for more observations affected shading color
+  select(-DO_mgL) |> 
+  mutate(Date1 = format(Date, "%d %b")) |> 
+  filter(Date1 %in% levels_agu) |> 
+  ggplot(aes(x = Distance, y = Depth_m, fill = SpCond_uScm))+
+  geom_rect(aes(xmin = Dry_start, xmax = Dry_end, ymin = -Inf, ymax = Inf), 
+            alpha = 1, fill = "gray", color = NA )+ #Line for dry reach; color gets rid of border
+  facet_wrap(~factor(Date1, levels = levels_agu), scales = "fixed", nrow = 1)+
+  geom_point(size = 3, shape = 21)+ #need shape here if not doing site type
+  scale_y_reverse(breaks = c(0, 0.5, 1, 1.5, 2, 2.5))+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 14),
+                    legend.text = element_text(size = 12),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)",
+       y = "Depth (m)", fill = "Sp. Cond (uS/cm)")+
+  scale_x_continuous(breaks = c(0, 150, 300)) +
+  #scale_fill_gradient(low = "blue",  high ="red")
+ scale_fill_gradient2(low = "blue",  high ="red",
+                       midpoint = 75,  guide = "colourbar")
+
+
+
 ```
  
 
