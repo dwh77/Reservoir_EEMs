@@ -159,6 +159,29 @@ rm(distances, edi_chem, doc, eems,eems24, iso24)
 
 ############################ Gen chem viz ##############################################
 
+##look at all the DOM comp
+
+```{r}
+levels <- c("BIX", "HIX", "FI", "AT", "A", "a254", "a350", "SUVA254" )
+
+
+#Across dates
+chem |> 
+  pivot_longer(-c(1:10)) |> 
+  # filter(!name %in% c("A_mean", "T_mean", "FI_mean", "a350_mean")) |> 
+  filter(name %in% levels) |> 
+  ggplot(aes(x = Distance, y = value, fill = Depth_m))+
+   geom_point(shape = 21, size = 4) + #shape = 21,
+  facet_wrap(~factor(name, levels = levels), scales = "free_y")+
+  theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  labs(x= "Distance from Stream (m)", fill = "Depth (m)")+
+  scale_x_continuous(breaks = c(0, 500, 1000, 1500))+ 
+  scale_fill_gradient2(low = "red",  high ="blue",
+                       midpoint = 6,  guide = "colourbar", breaks = c(3,6,9, 15))
+
+```
+
 
 ## Select chem over space across dates and  by date
 
@@ -634,6 +657,34 @@ wrap_plots(plots) #makes all the plots
 ```
 
 
+quick stats
+
+```{r}
+
+chem |> 
+  ungroup() |> 
+  select(Site_Type_static, DOC_mgL, HIX, BIX, NO3_ugL, D_excess) |> 
+  group_by(Site_Type_static) %>%
+  summarise(across(
+    .cols = where(is.numeric),
+    .fns = list(
+      mean   = ~mean(.x, na.rm = TRUE),
+      median = ~median(.x, na.rm = TRUE),
+      min    = ~min(.x, na.rm = TRUE),
+      max    = ~max(.x, na.rm = TRUE),
+      range  = ~max(.x, na.rm = TRUE) - min(.x, na.rm = TRUE)
+
+
+    ),
+    .names = "{.col}_{.fn}"
+  ))
+
+chem_summary
+
+
+```
+
+
 
 ## Breakpoints 
 
@@ -769,7 +820,21 @@ gridExtra::grid.arrange(segmented_plots$BIX, segmented_plots$DOC_mgL,
 #### EEMs
 gridExtra::grid.arrange(segmented_plots$BIX, segmented_plots$HIX, 
                         segmented_plots$AT, segmented_plots$SUVA254,
-                        plots$BIX, plots$HIX, plots$AT, plots$SUVA254, nrow = 2)
+                        plots$BIX, plots$HIX, plots$AT, plots$SUVA254, ncol = 1)
+
+## EEMs just breakpoints 
+eem_break_stack <- gridExtra::grid.arrange(segmented_plots$BIX, segmented_plots$HIX, 
+                        segmented_plots$AT, segmented_plots$SUVA254, ncol = 1)
+
+ggsave("MS_draft_figures/EEM_breakpoints.png", eem_break_stack, width = 4.5, height = 10, units = "in")
+
+eem_break_stackbox <- gridExtra::grid.arrange(segmented_plots$BIX, plots$BIX,
+                                              segmented_plots$HIX, plots$HIX,
+                        segmented_plots$AT, plots$AT, segmented_plots$SUVA254, plots$SUVA254, ncol = 2)
+
+ggsave("MS_draft_figures/EEM_breakpoints_Stack.png", eem_break_stackbox, width = 9, height = 10, units = "in")
+
+
 
 #### DOM
 gridExtra::grid.arrange(segmented_plots$DOC_mgL, segmented_plots$DON_mgL,
@@ -870,8 +935,8 @@ my.seg$psi
 slope(my.seg)
 
 
-#DON
-my.lm <- lm(DON_mgL ~ Distance, data = chem)
+#NO3
+my.lm <- lm(NO3_ugL ~ Distance, data = chem)
 davies <- davies.test(my.lm, k=10)
 davies
 my.seg <- segmented(my.lm,  seg.Z = ~ Distance,  psi = 2 )

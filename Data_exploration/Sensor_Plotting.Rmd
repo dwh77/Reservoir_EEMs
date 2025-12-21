@@ -160,6 +160,7 @@ plunge_temp_fig
 library(patchwork)
 plunge_spcond_fig / plunge_temp_fig
 
+
 ```
  
 ## MS figures 
@@ -261,6 +262,7 @@ SpCond_fig
 
 ##Temp 
 Temp_fig <- sensors |> 
+  # filter(!Site %in% c(88,50)) |> 
     filter(!is.na(Temp_C)) |> 
     mutate(Dry_start = ifelse(Depth_m == 0.1 & Site_code == "S1", Dry_start, NA),
          Dry_end = ifelse(Depth_m == 0.1 & Site_code == "S1", Dry_end, NA)) |> #so just one row has info for dry start and end, was having issues where laying multiple rectangles for more observations affected shading color
@@ -306,7 +308,9 @@ sensors_SI_fig <- Temp_fig / DO_fig / SpCond_fig
 
 sensors_SI_fig
 
-ggsave("MS_draft_figures/sensors_SI_fig.png", sensors_SI_fig, width = 9.5, height = 10, units = "in")
+# ggsave("MS_draft_figures/sensors_SI_fig.png", sensors_SI_fig, width = 9.5, height = 10, units = "in")
+
+plotly::ggplotly(Temp_fig_noPs)
 
 
 ```

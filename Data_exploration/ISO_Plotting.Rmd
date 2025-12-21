@@ -58,7 +58,7 @@ chem |>
   ))+
   geom_point(shape = 21, size = 3) + 
   #geom_point(data = iso_rain, mapping = aes(x = 1250, y = value, color = Date), size = 2, shape = 17)+
-  facet_wrap(~name, scales = "free_y", nrow = 2)+
+  facet_wrap(~name, scales = "free_y", nrow = 1)+
   theme_bw()+ theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   labs(x= "Distance from Stream (m)",  fill = "Depth (m)", color = "Rain")+
