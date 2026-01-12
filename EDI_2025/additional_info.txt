@@ -1,0 +1,9 @@
+Authorship Contribution Statement: 
+
+DWH and CCC
+KP and DS 
+AGH led initial development of this data package and associated code. 
+
+
+
+Acknowledgments and historical contributions:  This data package has been iteratively updated over time and builds on the many historical contributions of co-authors listed in previous revisions. We thank the Western Virginia Water Authority for providing access to these sites, the Reservoir Group for contributing to fieldwork, and XX and YY for constructive reviews on this data package. 
