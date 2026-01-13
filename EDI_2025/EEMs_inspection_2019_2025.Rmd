@@ -36,7 +36,7 @@ REVIEWERS- If you are reviewing this data package replace the pasta link with th
 # For REVIEWERS: Run this section to pull the data from EDI which is in staging as a check of the data.
 # MAKE SURE TO UPDATE THIS LINK BELOW 
                                                                                   
-staged_edi <-read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/1772/1/45207449d82365ab02caa4f7f3b05cc1")
+staged_edi <-read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/1772/3/45207449d82365ab02caa4f7f3b05cc1" )
 
  
 ```
@@ -47,8 +47,6 @@ staged_edi <-read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/1772/1/4
 ### Check flags that there are no NAs
 Flags=staged_edi%>%
   select(DateTime, abs_Flag, fl_Flag)
-
-RowsNA=Flags[!complete.cases(Flags), ] # Keep only the complete rows
 
 summary(Flags)
 
@@ -62,7 +60,7 @@ summary(Flags)
 ### look at summary data
 summary(staged_edi)
 
-### Look at all Abosrbance the data
+### Look at all Absorbance the data
 staged_edi |> 
   select(-abs_Flag, -fl_Flag) |> 
   select(1:6, a254_m:Sr) |> 
