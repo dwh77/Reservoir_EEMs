@@ -68,7 +68,7 @@ eems_19_25_time <- eems_19_25 |>
   #join known times together
   left_join(chem_times, by = c("Reservoir", "Site", "Date", "Depth_m")) |> 
   #remove duplicated rows
-  slice(-c(379, 432, 454)) |> 
+  slice(-c(379, 432, 453)) |> 
   #format times form EEMs overnight sampling
   mutate(TIME_eems_msn = ifelse(TIME == "6am", "06:00:00", NA),
          TIME_eems_msn = ifelse(TIME == "midnight", "00:00:00", TIME_eems_msn),
