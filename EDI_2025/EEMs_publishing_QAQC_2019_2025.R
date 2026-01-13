@@ -20,7 +20,11 @@ eems_21_25 <- read_csv("./EEMs_Results_2021_2025.csv") |>
 #### Remove flagged data and order data frame 
 eems_21_25_clean <- eems_21_25 |> 
   #removed suspect flagged scans
-  filter(is.na(FLAG)) 
+  filter(is.na(FLAG)) |> 
+  #Add Abs and EEMs flags for remaining data
+  mutate(abs_Flag = ifelse(is.na(a254_m),1,0),
+         fl_Flag = ifelse(is.na(Max_FL_Ex),1,0)) |> 
+  select(-Date, -FLAG, -Notes_flag)
 
 
 ##make file that has sample descriptions for building pfile description folder 
@@ -42,11 +46,10 @@ eems_19_20_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/841/1
 
 
 #bind data, add flags and remove unneeded columns
-eems_19_25 <- plyr::rbind.fill(eems_19_20_edi, eems_21_25_clean)  |> 
-  #Abs and EEMs flag
-  mutate(abs_Flag = ifelse(is.na(a254_m),1,0),
-         fl_Flag = ifelse(is.na(Max_FL_Ex),1,0)) |> 
-  select(-Date, -FLAG, -Notes_flag, -`Sample Name`)
+eems_19_25 <- plyr::rbind.fill(eems_19_20_edi, eems_21_25_clean) |> 
+  #remove uneeded column from sample name
+  select(-`Sample Name`)
+
 
 
 ##################################### Add times to datetime stamp ----
