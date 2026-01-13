@@ -20,9 +20,8 @@ library(EMLassemblyline)
 #in this case, our directory is ResFDOM/EDI_2021
 
 # Get and set your working directory
-wd <- getwd()
+getwd()
 
-setwd(wd)
 
 #Step 2: Move your dataset to the directory
 
@@ -38,31 +37,6 @@ setwd(wd)
 #for our application, we will need to generate all types of metadata
 #files except for taxonomic coverage, as we have both continuous and
 #categorical variables and want to report our geographic location
-
-# View documentation for these functions
-?template_core_metadata
-?template_table_attributes
-?template_categorical_variables #don't run this till later
-?template_geographic_coverage
-
-# Import templates for our dataset licensed under CCBY, with 1 table.
-template_core_metadata(path = "./EDI_2021",
-                       license = "CCBY",
-                       file.type = ".txt",
-                       write.file = TRUE)
-
-template_table_attributes(path = "./EDI_2021",
-                          data.path = "./EDI_2021",
-                          data.table = "20210511_OpticalData.csv",
-                          write.file = TRUE)
-
-#we want empty to be true for this because we don't include lat/long
-#as columns within our dataset but would like to provide them
-template_geographic_coverage(path = "./EDI_2021",
-                             data.path = "./EDI_2021",
-                             data.table = "20210511_OpticalData.csv",
-                             empty = TRUE,
-                             write.file = TRUE)
 
 #Step 7: Abstract
 #copy-paste the abstract from your Microsoft Word document into abstract.txt
@@ -92,7 +66,7 @@ template_geographic_coverage(path = "./EDI_2021",
 #grab attribute names and definitions from your metadata word document
 #for units....
 # View and search the standard units dictionary
-view_unit_dictionary()
+# view_unit_dictionary()
 #put flag codes and site codes in the definitions cell
 #force reservoir to categorical
 
@@ -103,9 +77,7 @@ view_unit_dictionary()
 # Run this function for your dataset
 #THIS WILL ONLY WORK once you have filled out the attributes_chemistry.txt and
 #identified which variables are categorical
-template_categorical_variables(path = "./EDI_2021",
-                               data.path = "./EDI_2021",
-                               write.file = TRUE)
+
 # None found!
 
 #Step 15: Geographic coverage
@@ -126,21 +98,38 @@ template_categorical_variables(path = "./EDI_2021",
 # ** double-check that all files are closed before running this command! **
 
 make_eml(
-  path = "./EDI_2021",
-  data.path = "./EDI_2021",
-  eml.path = "./EDI_2021",
-  dataset.title = "Time series of optical measurements (absorbance, fluorescence) for Beaverdam and Falling Creek Reservoir in Southwestern Virginia, USA 2019-2020",
-  temporal.coverage = c("2019-04-29", "2020-03-30"),
+  path = "./EDI_2025",
+  data.path = "./EDI_2025",
+  eml.path = "./EDI_2025",
+  dataset.title = "Time series of optical measurements (absorbance, fluorescence) for Beaverdam Reservoir, Carvins Cove Reservoir, and Falling Creek Reservoir in Southwestern Virginia, USA 2019-2025",
+  temporal.coverage = c("2019-04-29", "2025-04-16"),
   maintenance.description = 'completed',
-  data.table = "20210511_OpticalData.csv",
+  data.table = "OpticalData_2019_2025.csv",
   data.table.description = "OpticalDataset",
-  other.entity= c('Abs_QA_QC.R','PARAFAC_Mod.m','EEMs_pfiles.zip','CDOM_Correction.zip'),
-  other.entity.description = c("R script for QA/QC of absorbance and fluorescence data",
+  other.entity= c('EEMs_publishing_QAQC_2019_2025.R',
+                  'Abs_QA_QC_2019_2020.R',
+                  'EEMCorr_Fl.m',
+                  'PARAFAC_Mod.m',
+                  'EEMs_pfiles_2021_2025.zip',
+                  'EEMs_pfiles_2019_2020.zip',
+                  'CDOM_Correction_2019_2020.zip'),
+  other.entity.description = c("R script for QA/QC of absorbance and fluorescence data 2019-2025",
+                               
+                               "R script for QA/QC of absorbance and fluorescence data 2019-2020",
+                               
+                               "Matlab code used to corrected EEMs data and calculate metrics",
+                               
                                "Matlab code used to generate a PARAFAC model on the corrected EEMs data",
-                               "This zip folder contains corrected EEMs files ('p_ files') for all samples used in the PARAFAC model
+                               
+                               "This zip folder contains corrected EEMs files ('p_ files') for 2021 - 2025 samples. See README file for file types and descriptions.",
+                               
+                               "This zip folder contains corrected EEMs files ('p_ files') for 2019 - 2020 samples used in the PARAFAC model
                                and the OpenFluor output used to identify PARAFAC components. See README file for file types and descriptions.",
-                               "This zip folder contains CSV files for absorbance corrections for all measured absorbance samples. 
-                               See README file for file types and descriptions."),
+                               
+                               "This zip folder contains CSV files for 2019-2020 absorbance corrections for all measured absorbance samples. 
+                               See README file for file types and descriptions."
+                               
+                               ),
   user.id = 'ccarey',
   user.domain = 'EDI',
   package.id = 'edi.217.4')
