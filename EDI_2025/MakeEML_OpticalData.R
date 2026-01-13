@@ -104,16 +104,21 @@ make_eml(
   dataset.title = "Time series of optical measurements (absorbance, fluorescence) for Beaverdam Reservoir, Carvins Cove Reservoir, and Falling Creek Reservoir in Southwestern Virginia, USA 2019-2025",
   temporal.coverage = c("2019-04-29", "2025-04-16"),
   maintenance.description = 'completed',
-  data.table = "OpticalData_2019_2025.csv",
-  data.table.description = "OpticalDataset",
-  other.entity= c('EEMs_publishing_QAQC_2019_2025.R',
+  data.table = c("OpticalData_2019_2025.csv",
+                 "site_descriptions.csv"),
+  data.table.description = c("OpticalDataset",
+                             "Description, latitude, and longitude of reservoir sampling sites"),
+  other.entity= c('EEMs_inspection_2019_2025.Rmd',
+                  'EEMs_publishing_QAQC_2019_2025.R',
                   'Abs_QA_QC_2019_2020.R',
                   'EEMCorr_Fl.m',
                   'PARAFAC_Mod.m',
                   'EEMs_pfiles_2021_2025.zip',
                   'EEMs_pfiles_2019_2020.zip',
                   'CDOM_Correction_2019_2020.zip'),
-  other.entity.description = c("R script for QA/QC of absorbance and fluorescence data 2019-2025",
+  other.entity.description = c("Data compilation and visualization script",
+                               
+                               "R script for QA/QC of absorbance and fluorescence data 2019-2025",
                                
                                "R script for QA/QC of absorbance and fluorescence data 2019-2020",
                                
@@ -132,7 +137,7 @@ make_eml(
                                ),
   user.id = 'ccarey',
   user.domain = 'EDI',
-  package.id = 'edi.217.4')
+  package.id = 'edi.1772.3')
 
 ## Step 8: Check your data product! ####
 # Return to the EDI staging environment (https://portal-s.edirepository.org/nis/home.jsp),
