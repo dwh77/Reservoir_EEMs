@@ -116,13 +116,13 @@ make_eml(
                   'EEMs_pfiles_2021_2025.zip',
                   'EEMs_pfiles_2019_2020.zip',
                   'CDOM_Correction_2019_2020.zip'),
-  other.entity.description = c("Data compilation and visualization script",
+  other.entity.description = c("Data visualization script",
                                
-                               "R script for QA/QC of absorbance and fluorescence data 2019-2025",
+                               "R script to QA/QC and combine optical data from 2019-2025",
                                
-                               "R script for QA/QC of absorbance and fluorescence data 2019-2020",
+                               "R script for QA/QC of optical data and PARAFAC data from 2019-2020",
                                
-                               "Matlab code used to corrected EEMs data and calculate metrics",
+                               "Matlab code used to correct EEMs data and calculate metrics",
                                
                                "Matlab code used to generate a PARAFAC model on the corrected EEMs data",
                                
@@ -137,7 +137,7 @@ make_eml(
                                ),
   user.id = 'ccarey',
   user.domain = 'EDI',
-  package.id = 'edi.1772.3')
+  package.id = 'edi.1772.4')
 
 ## Step 8: Check your data product! ####
 # Return to the EDI staging environment (https://portal-s.edirepository.org/nis/home.jsp),
