@@ -38,7 +38,7 @@ make_eml(
   temporal.coverage = c("2024-05-22", "2025-04-16"),
   maintenance.description = 'completed',
   data.table = c("WaterIsotopes_CCR_2024_2025.csv",
-                 "WaterIsotopes_CCR_precip.csv",
+                 "WaterIsotopes_CCR_precip_2024.csv",
                  "site_descriptions.csv"),
   data.table.description = c("Tributary and reservoir stable water isotope samples",
                              "Precipitation stable water isotope samples",
@@ -48,7 +48,7 @@ make_eml(
                                ),
   user.id = 'ccarey',
   user.domain = 'EDI',
-  package.id = 'edi.1776.2')
+  package.id = 'edi.1776.3')
 
 ## Step 8: Check your data product! ####
 # Return to the EDI staging environment (https://portal-s.edirepository.org/nis/home.jsp),

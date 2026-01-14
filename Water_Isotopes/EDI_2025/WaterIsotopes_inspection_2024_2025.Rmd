@@ -36,7 +36,7 @@ REVIEWERS- If you are reviewing this data package replace the pasta link with th
 # For REVIEWERS: Run this section to pull the data from EDI which is in staging as a check of the data.
 # MAKE SURE TO UPDATE THIS LINK BELOW 
                                                                                   
-staged_edi <-read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/1772/3/45207449d82365ab02caa4f7f3b05cc1" )
+staged_edi <-read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/1776/2/71e54498052b76e103898e0b07426a7c" )
 
 ```
 
@@ -45,7 +45,7 @@ staged_edi <-read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/1772/3/4
 
 ### Check flags that there are no NAs
 Flags=staged_edi%>%
-  select(Date, Iso_Flag)
+  select(DateTime, Iso_Flag)
 
 summary(Flags)
 
@@ -59,23 +59,11 @@ summary(Flags)
 ### look at summary data
 summary(staged_edi)
 
-### Look at all Absorbance the data
-staged_edi |> 
-  select(-abs_Flag, -fl_Flag) |> 
-  select(1:6, a254_m:Sr) |> 
-  pivot_longer(-c(1:6)) |> 
-  ggplot(aes(x = DateTime, y = value))+
-  geom_point()+
-  facet_grid(name~Reservoir, scales = "free_y")+
-  ggtitle("All Abosrbance data") + 
-  theme_bw()
-
-
 ### Look at all the data
 staged_edi |> 
   select(-Iso_Flag) |> 
   pivot_longer(-c(1:4)) |> 
-  ggplot(aes(x = Date, y = value))+
+  ggplot(aes(x = DateTime, y = value))+
   geom_point()+
   facet_wrap(~name, scales = "free_y")+
   ggtitle("All Iso data") + 
@@ -85,7 +73,7 @@ staged_edi |>
 staged_edi |> 
   select(-Iso_Flag, -d2H_VSMOW_1sd, -d18O_VSMOW_1sd) |> 
   pivot_longer(-c(1:4)) |> 
-  ggplot(aes(x = mdy(Date), y = value, color = Depth_m))+
+  ggplot(aes(x = DateTime, y = value, color = as.factor(Depth_m)))+
   geom_point()+
   facet_grid(name~Site, scales = "free_y")+
   scale_x_date(date_labels = "%b %y")+
