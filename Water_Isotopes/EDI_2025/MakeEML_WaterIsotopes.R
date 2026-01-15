@@ -43,7 +43,7 @@ make_eml(
   data.table.description = c("Tributary and reservoir stable water isotope samples",
                              "Precipitation stable water isotope samples",
                              "Description, latitude, and longitude of reservoir sampling sites"),
-  other.entity= c('WaterIsotopes_inspection_2024_2025.Rmd'),
+  other.entity= c('WaterIsotopes_CCR_inspection_2024_2025.Rmd'),
   other.entity.description = c("Data visualization script"
                                ),
   user.id = 'ccarey',
