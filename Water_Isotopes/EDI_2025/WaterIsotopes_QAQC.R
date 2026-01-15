@@ -24,7 +24,6 @@ iso_reservoir <- iso |>
   rename(Site = Site_number) |> 
   filter(Site != 51) |> 
   mutate(Date = mdy(Date)) |> 
-  rename(DateTime = Date) |> 
   mutate(Iso_Flag = 0)
 
 # write.csv(iso_reservoir, "./Water_Isotopes/EDI_2025/WaterIsotopes_CCR_2024_2025.csv", row.names = F)
