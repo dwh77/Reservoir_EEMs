@@ -115,7 +115,8 @@ make_eml(
                   'PARAFAC_Mod.m',
                   'EEMs_pfiles_2021_2025.zip',
                   'EEMs_pfiles_2019_2020.zip',
-                  'CDOM_Correction_2019_2020.zip'),
+                  'CDOM_Correction_2019_2020.zip',
+                  'CDOM_data_2021_2025.zip'),
   other.entity.description = c("Data visualization script",
                                
                                "R script to QA/QC and combine optical data from 2019-2025",
@@ -132,6 +133,9 @@ make_eml(
                                and the OpenFluor output used to identify PARAFAC components. See README file for file types and descriptions.",
                                
                                "This zip folder contains CSV files for 2019-2020 absorbance corrections for all measured absorbance samples. 
+                               See README file for file types and descriptions.",
+                               
+                               "This zip folder contains CSV files for raw absorbance data from 2021-2025 for all measured absorbance samples.
                                See README file for file types and descriptions."
                                
                                ),
